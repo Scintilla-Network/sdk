@@ -20,16 +20,16 @@ yarn add @scintilla-network/sdk
 
 The SDK includes a variety of primitives, each tailored for specific use cases within the Scintilla ecosystem:
 
-- [Asset](./src/primitives/asset/README.md) - An asset is a specific asset in the Scintilla network.
-- [DAO](./src/primitives/dao/README.md) - A DAO is a decentralized autonomous organization.
-- [ModuleBlock](./src/primitives/moduleBlock/README.md) - A module block is a block representation in a specific module.
-- [Transaction](./src/primitives/transaction/README.md) - A transaction is a message that is used to perform a specific action.
-- [Messages](./src/primitives/messages/README.md) - Messages are the fundamental units of communication in the Scintilla network.
+- [Asset](./src/primitives/Asset/Asset.md) - An asset is a specific asset in the Scintilla network.
+<!-- - [DAO](./src/primitives/dao/DAO.md) - A DAO is a decentralized autonomous organization. -->
+- [ModuleBlock](./src/primitives/moduleBlock/ModuleBlock.md) - A module block is a block representation in a specific module.
+- [Transaction](./src/primitives/Transaction/Transaction.md) - A transaction is a message that is used to perform a specific action.
+- [Messages](./src/primitives/messages/Messages.md) - Messages are the fundamental units of communication in the Scintilla network.
 - [ClusterBlock](./src/primitives/ClusterBlock/ClusterBlock.md) - A cluster block is a block representation in a specific cluster.
 - [DriveData](./src/primitives/DriveData/DriveData.md) - A drive data is a data that is stored in drive.
 - [GovernanceProposal](./src/primitives/GovernanceProposal/GovernanceProposal.md) - A governance proposal is a proposal to the DAO.
 - [GovernanceVote](./src/primitives/GovernanceVote/GovernanceVote.md) - A governance vote is a vote on a governance proposal.
-- [HashProof](./src/primitives/hashProof/README.md) - A hash proof is a POW block in a cluster
+- [HashProof](./src/primitives/HashProof/HashProof.md) - A hash proof is a POW block in a cluster
 - [Identity](./src/primitives/Identity/Identity.md) - An identity is a unique entity with a moniker, address, and associated records.
 - [RelayBlock](./src/primitives/RelayBlock/RelayBlock.md) - A relay block is a specific block that happen between relayers.
 - [Transaction](./src/primitives/Transaction/Transaction.md) - A transaction is a message that is used to perform a specific action.

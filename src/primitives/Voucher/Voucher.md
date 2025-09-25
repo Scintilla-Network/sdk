@@ -1,7 +1,6 @@
-## Voucher Class Documentation
+## Voucher
 
-### Overview
-The Voucher class represents a digital voucher in the Scintilla network, providing functionality for creating, managing, and validating transferable value tokens. Each voucher contains information about assets, inputs, outputs, and authorization details.
+A voucher is a digital voucher in the Scintilla network, providing functionality for creating, managing, and validating transferable value tokens. Each voucher contains information about assets, inputs, outputs, and authorization details.
 
 ### Installation
 ```js
@@ -9,8 +8,6 @@ import { Voucher } from '@scintilla/ts-sdk';
 ```
 
 ### Initializing a Voucher
-
-You can initialize a Voucher instance by providing an object with properties that match the IVoucherOptions interface:
 
 ```typescript
 const voucher = new Voucher({
@@ -38,7 +35,7 @@ const voucher = new Voucher({
 ```
 
 #### Properties
-- `hash`: Unique identifier of the voucher (auto-computed if not provided)
+- `hash`: Unique identifier of the voucher (auto-generated if not provided)
 - `asset`: The asset identifier this voucher represents
 - `inputs`: Array of input sources (previous vouchers)
 - `output`: Destination and amount information
@@ -120,9 +117,3 @@ console.log(`Total Input: ${voucher.getTotalInput()}`);
 console.log(`Total Output: ${voucher.getTotalOutput()}`);
 console.log(`Asset: ${voucher.asset}`);
 ```
-
-### Security Considerations
-- Always verify signatures before accepting a voucher
-- Check timelock constraints when processing vouchers
-- Ensure input and output amounts match
-- Validate all authorizations are present and valid
