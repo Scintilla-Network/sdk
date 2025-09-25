@@ -1,1 +1,0 @@
-{"version":3,"file":"IChainBlockOptions.d.ts","sourceRoot":"","sources":["../../../../src/primitives/ChainBlock/interfaces/IChainBlockOptions.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,wBAAwB,EAAE,MAAM,+BAA+B,CAAC;AACzE,OAAO,EAAE,yBAAyB,EAAE,MAAM,gCAAgC,CAAC;AAE3E,MAAM,WAAW,kBAAkB;IAC/B,MAAM,CAAC,EAAE,wBAAwB,CAAC;IAClC,IAAI,CAAC,EAAE,yBAAyB,CAAC;CACpC"}

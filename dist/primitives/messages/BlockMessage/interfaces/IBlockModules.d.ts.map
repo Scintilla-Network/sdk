@@ -1,1 +1,0 @@
-{"version":3,"file":"IBlockModules.d.ts","sourceRoot":"","sources":["../../../../../src/primitives/messages/BlockMessage/interfaces/IBlockModules.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,aAAa;IAC1B,IAAI,EAAE,GAAG,EAAE,CAAC;IACZ,SAAS,EAAE,GAAG,EAAE,CAAC;IACjB,QAAQ,EAAE,GAAG,EAAE,CAAC;CACnB"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"IRecord.d.ts","sourceRoot":"","sources":["../../../../src/primitives/Identity/interfaces/IRecord.ts"],"names":[],"mappings":"AAEA,MAAM,WAAW,OAAO;IACpB,CAAC,GAAG,EAAE,MAAM,GAAG,GAAG,CAAC;CACtB;AAKD,MAAM,WAAW,eAAgB,SAAQ,OAAO;IAC5C,OAAO,EAAE,MAAM,CAAC;CACnB"}

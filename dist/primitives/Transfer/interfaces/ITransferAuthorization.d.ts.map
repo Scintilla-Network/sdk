@@ -1,1 +1,0 @@
-{"version":3,"file":"ITransferAuthorization.d.ts","sourceRoot":"","sources":["../../../../src/primitives/Transfer/interfaces/ITransferAuthorization.ts"],"names":[],"mappings":"AACA,MAAM,WAAW,sBAAsB;IACnC,SAAS,CAAC,EAAE,MAAM,CAAC;IACnB,SAAS,EAAE,MAAM,CAAC;IAClB,OAAO,CAAC,EAAE,MAAM,CAAC;CACpB"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"ITransactionAuthorization.d.ts","sourceRoot":"","sources":["../../../../src/primitives/Transaction/interfaces/ITransactionAuthorization.ts"],"names":[],"mappings":"AACA,MAAM,WAAW,yBAAyB;IACtC,SAAS,CAAC,EAAE,MAAM,CAAC;IACnB,SAAS,EAAE,MAAM,CAAC;IAClB,OAAO,CAAC,EAAE,MAAM,CAAC;CACpB"}

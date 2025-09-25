@@ -1,1 +1,0 @@
-{"version":3,"file":"IPeerInfoMessageOptions.d.ts","sourceRoot":"","sources":["../../../../../src/primitives/messages/PeerInfoMessage/interfaces/IPeerInfoMessageOptions.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,uBAAuB;IACpC,QAAQ,CAAC,EAAE;QACP,OAAO,EAAE,MAAM,CAAC;KACnB,CAAC;IACF,OAAO,CAAC,EAAE,GAAG,EAAE,CAAC;IAChB,KAAK,CAAC,EAAE,MAAM,CAAC;CAClB"}

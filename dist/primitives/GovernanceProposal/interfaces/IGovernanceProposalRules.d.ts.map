@@ -1,1 +1,0 @@
-{"version":3,"file":"IGovernanceProposalRules.d.ts","sourceRoot":"","sources":["../../../../src/primitives/GovernanceProposal/interfaces/IGovernanceProposalRules.ts"],"names":[],"mappings":"AACA,MAAM,WAAW,wBAAwB;IACrC,IAAI,EAAE,MAAM,CAAC;IACb,OAAO,CAAC,EAAE,MAAM,EAAE,CAAC;IACnB,KAAK,EAAE,MAAM,CAAC;CACjB"}

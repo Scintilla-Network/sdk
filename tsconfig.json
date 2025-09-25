@@ -14,9 +14,17 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "baseUrl": ".",
-    "outDir": "./esm",
-    "module": "Node16",
-    "moduleResolution": "node16"
+    "outDir": "./esm", 
+    "rootDir": ".",
+    "paths": {
+      "./*": ["./*", "./*.ts", "./*.js"]
+    },
+    "module": "ESNext",
+    "moduleDetection": "force", 
+    "declaration": true,
+    "declarationMap": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "Bundler"
   },
-  "include": ["src",""],
+  "include": ["src"]
 }

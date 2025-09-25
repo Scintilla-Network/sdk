@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from '@scintilla-network/litest';
 import Queue from './Queue.js';
 
 describe('Queue', () => {

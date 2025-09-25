@@ -1,1 +1,0 @@
-{"version":3,"file":"IHashProofPayloadElement.d.ts","sourceRoot":"","sources":["../../../../src/primitives/HashProof/interfaces/IHashProofPayloadElement.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,wBAAwB;IACrC,IAAI,EAAE,MAAM,CAAC;IACb,IAAI,EAAE,aAAa,GAAG,YAAY,GAAG,UAAU,CAAC;IAChD,SAAS,EAAE,MAAM,CAAC;IAClB,IAAI,EAAE,GAAG,CAAC;CACb"}

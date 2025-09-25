@@ -1,1 +1,0 @@
-{"version":3,"file":"IModuleBlockPayloadOptions.d.ts","sourceRoot":"","sources":["../../../../src/primitives/ModuleBlock/interfaces/IModuleBlockPayloadOptions.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,0BAA0B;IACvC,eAAe,CAAC,EAAE,MAAM,EAAE,CAAC;IAC3B,mBAAmB,CAAC,EAAE,MAAM,EAAE,CAAC;CAClC"}

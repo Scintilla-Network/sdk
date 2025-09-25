@@ -1,1 +1,0 @@
-{"version":3,"file":"IIdentityMember.d.ts","sourceRoot":"","sources":["../../../../src/primitives/Identity/interfaces/IIdentityMember.ts"],"names":[],"mappings":"AACA,MAAM,MAAM,yBAAyB,GAAG,MAAM,CAAC;AAE/C,MAAM,MAAM,eAAe,GAAG,CAAC,MAAM,EAAE,MAAM,CAAC,EAAE,MAAM,CAAC,EAAE,MAAM,CAAC,EAAE,MAAM,CAAC,EAAE,MAAM,CAAC,EAAE,MAAM,CAAC,CAAC,CAAC;AAE7F,MAAM,MAAM,gBAAgB,GAAG,eAAe,EAAE,CAAC"}

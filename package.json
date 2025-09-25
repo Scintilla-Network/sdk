@@ -1,41 +1,78 @@
 {
   "name": "@scintilla-network/sdk",
-  "version": "1.0.0-beta.16",
+  "version": "1.0.0-beta.48",
   "description": "A TypeScript SDK for Node.js and Web Browsers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./src/index.js"
+      "types": "./src/index.d.ts",
+      "browser": "./src/index.js",
+      "import": "./src/index.js",
+      "require": "./src/index.js"
     }
   },
   "scripts": {
-    "build": "npm run build:clean; tsc && tsc -p tsconfig.cjs.json",
-    "build:clean": "npm run build:clean:dist; npm run build:clean:esm",
-    "build:clean:dist": "rm dist/*.{js,js.map} 2> /dev/null",
-    "build:clean:esm": "rm esm/*.{js,js.map} 2> /dev/null",
-    "test": "vitest",
-    "test:watch": "vitest watch",
-    "lint": "eslint src --ext .ts"
+    "test": "litest",
+    "test:watch": "litest watch",
+    "lint": "eslint src --ext .ts",
+    "test:asset": "litest src/primitives/Asset/Asset.spec.js",
+    "test:authorization": "litest src/primitives/Authorization/Authorization.spec.js",
+    "test:clusterblock": "litest src/primitives/ClusterBlock/ClusterBlock.spec.js",
+    "test:drivedata": "litest src/primitives/DriveData/DriveData.spec.js",
+    "test:governanceproposal": "litest src/primitives/GovernanceProposal/GovernanceProposal.spec.js",
+    "test:governancevote": "litest src/primitives/GovernanceVote/GovernanceVote.spec.js",
+    "test:hashproof": "litest src/primitives/HashProof/HashProof.spec.js",
+    "test:transaction": "litest src/primitives/Transaction/Transaction.spec.js",
+    "test:transition": "litest src/primitives/Transition/Transition.spec.js",
+    "test:transfer": "litest src/primitives/Transfer/Transfer.spec.js",
+    "test:voucher": "litest src/primitives/Voucher/Voucher.spec.js",
+    "test:identity": "litest src/primitives/Identity/Identity.spec.js",
+    "test:netmessage": "litest src/primitives/messages/NetMessage/NetMessage.spec.js",
+    "test:relayblock": "litest src/primitives/RelayBlock/RelayBlock.spec.js"
   },
-  "keywords": [],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Scintilla-Network/sdk/issues"
+  },
+  "homepage": "https://github.com/Scintilla-Network/sdk#readme",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Scintilla-Network"
+  },
+  "keywords": [
+    "scintilla",
+    "sdk",
+    "javascript",
+    "blockchain",
+    "crypto",
+    "assets",
+    "governance",
+    "transactions",
+    "messages",
+    "chainblocks",
+    "clusterblocks",
+    "drivedata",
+    "governanceproposals",
+    "governancevotes",
+    "hashproofs",
+    "peers",
+    "vouchers",
+    "transitions",
+    "transfers",
+    "transactions",
+    "identities",
+    "relayblocks"
+  ],
   "author": "Scintilla Labs",
   "devDependencies": {
-    "@types/node": "^20.12.12",
-    "eslint": "^9.3.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "@scintilla-network/litest": "1.3.1"
   },
   "dependencies": {
-    "@noble/curves": "^1.4.0",
-    "@noble/hashes": "^1.4.0",
-    "@stablelib/sha256": "^1.0.1",
-    "@truestamp/tree": "^2.1.0",
-    "buffer": "^6.0.3",
-    "hermodlog": "^1.4.1"
+    "@scintilla-network/hashes": "1.3.1",
+    "@scintilla-network/keys": "1.0.0-beta.24",
+    "@truestamp/tree": "2.1.0",
+    "hermodlog": "1.5.2"
   }
 }

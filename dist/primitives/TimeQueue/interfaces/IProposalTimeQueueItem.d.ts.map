@@ -1,1 +1,0 @@
-{"version":3,"file":"IProposalTimeQueueItem.d.ts","sourceRoot":"","sources":["../../../../src/primitives/TimeQueue/interfaces/IProposalTimeQueueItem.ts"],"names":[],"mappings":"AACA,OAAO,EAAC,cAAc,EAAC,MAAM,qBAAqB,CAAC;AAEnD,MAAM,WAAW,sBAAuB,SAAQ,cAAc;IAC1D,OAAO,EAAE;QACL,SAAS,EAAE,IAAI,CAAC;QAChB,OAAO,EAAE,MAAM,CAAC;KACnB,CAAC;CACL"}

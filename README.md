@@ -1,42 +1,50 @@
-## @scintilla/ts-sdk
+## @scintilla-network/sdk
 
-The `@scintilla/ts-sdk` provides a comprehensive suite of TypeScript primitives and utilities designed for building and interacting with the Scintilla blockchain. This SDK simplifies the development process by offering well-defined structures for assets, governance, transactions, and more, alongside essential utilities for hashing and variable-length integer handling.
+The `@scintilla-network/sdk` provides a comprehensive suite of TypeScript primitives and utilities designed for building and interacting with the Scintilla blockchain. This SDK simplifies the development process by offering well-defined structures for assets, governance, transactions, and more, alongside essential utilities for hashing and variable-length integer handling.
 
 ### Installation
 
 To install the SDK in your project, run:
 
 ```bash
-npm install @scintilla/ts-sdk
+npm install @scintilla-network/sdk
 ```
 
 or if you are using yarn:
 
 ```bash
-yarn add @scintilla/ts-sdk
+yarn add @scintilla-network/sdk
 ```
 
 #### Primitives
 
 The SDK includes a variety of primitives, each tailored for specific use cases within the Scintilla ecosystem:
 
-- [Asset](./src/primitives/asset/README.md)
-- [DAO](./src/primitives/dao/README.md)
-- [DriveData](./src/primitives/driveData/README.md)
-- [GovernanceProposal](./src/primitives/governanceProposal/README.md)
-- [GovernanceVote](./src/primitives/governanceVote/README.md)
-- [HashProof](./src/primitives/hashProof/README.md)
-- [Identity](./src/primitives/identity/README.md)
-- [ModuleBlock](./src/primitives/moduleBlock/README.md)
-- [Transaction](./src/primitives/transaction/README.md)
-- [Transfer](./src/primitives/transfer/README.md)
-- [Transition](./src/primitives/transition/README.md)
-- [Messages](./src/primitives/messages/README.md)
+- [Asset](./src/primitives/asset/README.md) - An asset is a specific asset in the Scintilla network.
+- [DAO](./src/primitives/dao/README.md) - A DAO is a decentralized autonomous organization.
+- [ModuleBlock](./src/primitives/moduleBlock/README.md) - A module block is a block representation in a specific module.
+- [Transaction](./src/primitives/transaction/README.md) - A transaction is a message that is used to perform a specific action.
+- [Messages](./src/primitives/messages/README.md) - Messages are the fundamental units of communication in the Scintilla network.
+- [ClusterBlock](./src/primitives/ClusterBlock/ClusterBlock.md) - A cluster block is a block representation in a specific cluster.
+- [DriveData](./src/primitives/DriveData/DriveData.md) - A drive data is a data that is stored in drive.
+- [GovernanceProposal](./src/primitives/GovernanceProposal/GovernanceProposal.md) - A governance proposal is a proposal to the DAO.
+- [GovernanceVote](./src/primitives/GovernanceVote/GovernanceVote.md) - A governance vote is a vote on a governance proposal.
+- [HashProof](./src/primitives/hashProof/README.md) - A hash proof is a POW block in a cluster
+- [Identity](./src/primitives/Identity/Identity.md) - An identity is a unique entity with a moniker, address, and associated records.
+- [RelayBlock](./src/primitives/RelayBlock/RelayBlock.md) - A relay block is a specific block that happen between relayers.
+- [Transaction](./src/primitives/Transaction/Transaction.md) - A transaction is a message that is used to perform a specific action.
+- [Transfer](./src/primitives/Transfer/Transfer.md) - A transfer is a message that is used to transfer assets.
+- [Transition](./src/primitives/Transition/Transition.md) - A transition is a message that is used to transition the state of the system.
+- [Voucher](./src/primitives/Voucher/Voucher.md) - A digital voucher for transferring assets.
+
+#### Misc Primitives
+
+- [Peer](./src/primitives/Peer/Peer.md) - A peer is a part of the network.
 
 #### Message 
 The SDK also includes primitives for message handling:
 
-- [NetMessage](./src/primitives/messages/NetMessage.md)
+- [NetMessage](src/primitives/messages/NetMessage/NetMessage.md)
 - [BlockMessage](./src/primitives/messages/BlockMessage.md)
 - [PeerInfoMessage](./src/primitives/messages/PeerInfoMessage.md)
 - [StatementMessage](./src/primitives/messages/StatementMessage.md)
@@ -51,6 +59,7 @@ Some technical utilities are designed for specific data handling and management 
 - [FIFOLookupMap](./src/utilities/fifoLookupMap/README.md)
 - [Queue](./src/utilities/queue/README.md)
 - [TimeQueue](./src/utilities/timeQueue/README.md)
+- [TimeLock](./src/utilities/timeLock/README.md)
 
 
 These data structures are exported separately to emphasize their utility nature and potential broader applicability outside the direct blockchain interaction scenarios.
@@ -60,7 +69,7 @@ These data structures are exported separately to emphasize their utility nature 
 To use a primitive or utility from the SDK, import it into your TypeScript file as follows:
 
 ```typescript
-import { Asset, Transfer, sha256 } from '@scintilla/ts-sdk';
+import { Asset, Transfer, sha256 } from '@scintilla-network/sdk';
 
 // Example usage
 const asset = new Asset({/* initial properties */});
@@ -74,13 +83,6 @@ Refer to the individual documentation for each primitive and utility for detaile
 #### Browser 
 
 ```js
-<script type="importmap">
-    {
-        "imports": {
-            "@scintilla-network/sdk": "./dist/index.js"
-        }
-    }
-</script>
 <script type="module">
     import {Asset} from "@scintilla-network/sdk";
     console.log(new Asset('test'));
@@ -88,7 +90,7 @@ Refer to the individual documentation for each primitive and utility for detaile
 ```
 ### Contributing
 
-We welcome contributions to the `@scintilla/ts-sdk`! Please read our [Contributing Guide](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+We welcome contributions to the `@scintilla-network/sdk`! Please read our [Contributing Guide](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
 
 ### License
 

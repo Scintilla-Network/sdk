@@ -1,1 +1,0 @@
-{"version":3,"file":"IHashProofOptions.d.ts","sourceRoot":"","sources":["../../../../src/primitives/HashProof/interfaces/IHashProofOptions.ts"],"names":[],"mappings":"AAAA,OAAO,EAAC,uBAAuB,EAAC,MAAM,8BAA8B,CAAC;AACrE,OAAO,EAAC,wBAAwB,EAAC,MAAM,+BAA+B,CAAC;AAEvE,MAAM,WAAW,iBAAiB;IAC9B,MAAM,CAAC,EAAE,uBAAuB,CAAC;IACjC,OAAO,CAAC,EAAE,wBAAwB,CAAC;CACtC"}

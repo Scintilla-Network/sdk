@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from '@scintilla-network/litest';
 import TimeQueue from './TimeQueue.js';
 import { ITimeQueueItem } from './interfaces/ITimeQueueItem.js';
 

@@ -1,0 +1,25 @@
+// Assuming this file is located at src/messages/NET_KINDS.d.ts
+export declare enum NET_KINDS {
+    UNKNOWN = 0,
+    PEER_INFO = 1,
+    REQUEST = 2,
+    RESPONSE = 3,
+    ACKHANDSHAKE = 4,
+    EPOCHBLOCK = 5,
+    CLUSTERBLOCK = 6,
+    HASHPROOF = 7,
+    TRANSACTION = 8,
+    TRANSITION = 9,
+    TRANSFER = 10,
+    STATEMENT = 11,
+    HANDSHAKE = 12,
+    QUORUMDECISION = 13,
+    QUORUMDECISIONVOTE = 14,
+    RELAYBLOCK = 15,
+    VOUCHER = 16,
+    ASSET = 17,
+    IDENTITY = 18,
+    GOVERNANCEPROPOSAL = 19,
+    GOVERNANCEVOTE = 20
+}   
+

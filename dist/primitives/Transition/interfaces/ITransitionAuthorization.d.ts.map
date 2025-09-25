@@ -1,1 +1,0 @@
-{"version":3,"file":"ITransitionAuthorization.d.ts","sourceRoot":"","sources":["../../../../src/primitives/Transition/interfaces/ITransitionAuthorization.ts"],"names":[],"mappings":"AACA,MAAM,WAAW,wBAAwB;IACrC,SAAS,CAAC,EAAE,MAAM,CAAC;IACnB,SAAS,EAAE,MAAM,CAAC;IAClB,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,OAAO,CAAC,EAAE,MAAM,CAAC;CACpB"}

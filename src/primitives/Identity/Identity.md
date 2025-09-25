@@ -84,7 +84,7 @@ Advanced Usage
 
 ```js
 'rules': {
-                "modules": {
+                "clusters": {
                     "core.identity": {
                         "actions": {
                             // Allow every member of the DAO to create a proposal

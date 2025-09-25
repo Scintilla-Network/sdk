@@ -1,1 +1,0 @@
-{"version":3,"file":"IKeychainRecord.d.ts","sourceRoot":"","sources":["../../../../src/primitives/Identity/interfaces/IKeychainRecord.ts"],"names":[],"mappings":"AAEA,MAAM,WAAW,eAAe;IAC5B,CAAC,GAAG,EAAE,MAAM,GAAG,GAAG,CAAC;CACtB;AAKD,MAAM,WAAW,uBAAwB,SAAQ,eAAe;IAC5D,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,GAAG,CAAC,EAAE,MAAM,CAAC;CAChB"}
