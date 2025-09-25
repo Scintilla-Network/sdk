@@ -4,13 +4,10 @@
 //
 export { default as Asset } from './primitives/Asset/Asset.js'
 
+export { default as BigDecimal } from './primitives/BigDecimal/BigDecimal.js' 
 export { default as RelayBlock } from './primitives/RelayBlock/RelayBlock.js'
 export { default as RelayBlockHeader } from './primitives/RelayBlock/RelayBlockHeader.js'
 export { default as RelayBlockPayload } from './primitives/RelayBlock/RelayBlockPayload.js'
-
-export { default as ChainBlock } from './primitives/ChainBlock/ChainBlock.js'
-export { default as ChainBlockHeader } from './primitives/ChainBlock/ChainBlockHeader.js'
-export { default as ChainBlockPayload } from './primitives/ChainBlock/ChainBlockPayload.js'
 export { default as DriveData } from './primitives/DriveData/DriveData.js'
 export { default as FIFOLookupMap } from './primitives/FIFOLookupMap/FIFOLookupMap.js'
 export { default as GovernanceProposal } from './primitives/GovernanceProposal/GovernanceProposal.js'

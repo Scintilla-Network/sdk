@@ -21,6 +21,8 @@ yarn add @scintilla-network/sdk
 The SDK includes a variety of primitives, each tailored for specific use cases within the Scintilla ecosystem:
 
 - [Asset](./src/primitives/Asset/Asset.md) - An asset is a specific asset in the Scintilla network.
+- [Authorization](./src/primitives/Authorization/Authorization.md) - An authorization is a message that is used to authorize a specific action.
+- [BigDecimal](./src/primitives/BigDecimal/BigDecimal.md) - A big decimal is a decimal number that is used to represent a large number.
 <!-- - [DAO](./src/primitives/dao/DAO.md) - A DAO is a decentralized autonomous organization. -->
 - [ModuleBlock](./src/primitives/moduleBlock/ModuleBlock.md) - A module block is a block representation in a specific module.
 - [Transaction](./src/primitives/Transaction/Transaction.md) - A transaction is a message that is used to perform a specific action.
