@@ -23,6 +23,16 @@ export class Authorization {
         this.address = address || null;
     }
 
+
+
+    verify(element) {
+        const valid = this.verifySignatures(element, this.publicKey);
+        if(!valid || valid.valid === false) {
+            throw new Error('Invalid signature.');
+        }
+        return valid;
+    }
+
     /**
      * Process signature input - convert string to Uint8Array if needed
      * @private
@@ -66,60 +76,72 @@ export class Authorization {
         if (this.moniker) authType |= 4;
         if (this.address) authType |= 8;
 
-        chunks.push(new Uint8Array([authType]));
+        // chunks.push(new Uint8Array([authType]));
+        let authBytes = new Uint8Array();
 
         // Add signature if present
         if (authType & 1) {
             const signatureLength = encodeVarInt(this.signature.length);
-            chunks.push(signatureLength);
-            chunks.push(this.signature);
+            authBytes = new Uint8Array([...authBytes, ...signatureLength, ...this.signature]);
         }
 
         // Add publicKey if present
         if (authType & 2) {
-            const publicKeyLength = encodeVarInt(this.publicKey?.length ?? 0);
-            chunks.push(publicKeyLength);
-            chunks.push(this.publicKey ?? new Uint8Array());
+            const pubKey = this.publicKey ?? new Uint8Array();
+            const pubKeyLength = encodeVarInt(pubKey.length);
+            authBytes = new Uint8Array([...authBytes, ...pubKeyLength, ...pubKey]);
         }
 
         // Add moniker if present
         if (authType & 4) {
             const monikerBytes = uint8array.fromString(this.moniker ?? '');
             const monikerLength = encodeVarInt(monikerBytes.length);
-            chunks.push(monikerLength);
-            chunks.push(monikerBytes);
+            authBytes = new Uint8Array([...authBytes, ...monikerLength, ...monikerBytes]);
         }
 
         // Add address if present
         if (authType & 8) {
             const addressBytes = uint8array.fromString(this.address ?? '');
             const addressLength = encodeVarInt(addressBytes.length);
-            chunks.push(addressLength);
-            chunks.push(addressBytes);
+            authBytes = new Uint8Array([...authBytes, ...addressLength, ...addressBytes]);
         }
 
-        // Calculate total length and create result array
-        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        // let authBytes = new Uint8Array();
+        // for(const chunk of chunks) {
+        //     authBytes = new Uint8Array([...authBytes, ...chunk]);
+        // }
+        const authBytesLength = encodeVarInt(authBytes.length);
+        const authTypeBytes = encodeVarInt(authType);
+        // process.exit(0);
+
+
+        // const totalLength = authTypeBytesLength  authBytesLength;
+        const totalLength = authTypeBytes.length + authBytesLength.length + authBytes.length;
         const result = new Uint8Array(totalLength);
-        
         let offset = 0;
-        for (const chunk of chunks) {
-            result.set(chunk, offset);
-            offset += chunk.length;
-        }
-
+        result.set(authTypeBytes, 0);offset += authTypeBytes.length;
+        result.set(authBytesLength, offset);offset += authBytesLength.length;
+        result.set(authBytes, offset);offset += authBytes.length;
+        // process.exit(0);
         return result;
     }
 
     /**
      * Create Authorization from Uint8Array
      */
-    static fromUint8Array(uint8Array) {
+    static fromUint8Array(inputArray) {
         let offset = 0;
-        
-        // Read authorization type
-        const authType = uint8Array[offset];
-        offset += 1;
+
+
+        const authType = decodeVarInt(inputArray.subarray(offset));
+        offset += authType.length;
+
+        const authBytesLength = decodeVarInt(inputArray.subarray(offset));
+        offset += authBytesLength.length;
+
+
+        const authBytes = inputArray.subarray(offset, offset + authBytesLength.value);
+
 
         let signature = null;
         let publicKey = null;
@@ -127,34 +149,35 @@ export class Authorization {
         let address = null;
 
         // Read signature if present
-        if (authType & 1) {
-            const { value: sigLength, length: sigLengthBytes } = decodeVarInt(uint8Array.subarray(offset));
+        offset = 0;
+        if (authType.value & 1) {
+            const { value: sigLength, length: sigLengthBytes } = decodeVarInt(authBytes.subarray(offset));
             offset += sigLengthBytes;
-            signature = uint8Array.subarray(offset, offset + sigLength);
+            signature = authBytes.subarray(offset, offset + sigLength);
             offset += sigLength;
         }
 
         // Read publicKey if present
-        if (authType & 2) {
-            const { value: pubKeyLength, length: pubKeyLengthBytes } = decodeVarInt(uint8Array.subarray(offset));
+        if (authType.value & 2) {
+            const { value: pubKeyLength, length: pubKeyLengthBytes } = decodeVarInt(authBytes.subarray(offset));
             offset += pubKeyLengthBytes;
-            publicKey = uint8Array.subarray(offset, offset + pubKeyLength);
+            publicKey = authBytes.subarray(offset, offset + pubKeyLength);
             offset += pubKeyLength;
         }
 
         // Read moniker if present
-        if (authType & 4) {
-            const { value: monikerLength, length: monikerLengthBytes } = decodeVarInt(uint8Array.subarray(offset));
+        if (authType.value & 4) {
+            const { value: monikerLength, length: monikerLengthBytes } = decodeVarInt(authBytes.subarray(offset));
             offset += monikerLengthBytes;
-            moniker = uint8array.toString(uint8Array.subarray(offset, offset + monikerLength));
+            moniker = uint8array.toString(authBytes.subarray(offset, offset + monikerLength));
             offset += monikerLength;
         }
 
         // Read address if present
-        if (authType & 8) {
-            const { value: addressLength, length: addressLengthBytes } = decodeVarInt(uint8Array.subarray(offset));
+        if (authType.value & 8) {
+            const { value: addressLength, length: addressLengthBytes } = decodeVarInt(authBytes.subarray(offset));
             offset += addressLengthBytes;
-            address = uint8array.toString(uint8Array.subarray(offset, offset + addressLength));
+            address = uint8array.toString(authBytes.subarray(offset, offset + addressLength));
             offset += addressLength;
         }
 
@@ -221,12 +244,12 @@ export class Authorization {
         if(!this.signature) return {valid: false, error: 'Signature is required for verification.'};
         if(!this.publicKey && !publicKey) return {valid: false, error: 'Public key is required for verification.'};
 
-        let elementBytes = element?.toUint8Array({ excludeSignatures: true, excludeAuthorization: true });
+        let elementBytes = element?.toUint8Array({ excludeSignatures: true, excludeAuthorizations: true });
         if(!elementBytes) {
-            elementBytes=element?.toHex({ excludeSignatures: true, excludeAuthorization: true });
+            elementBytes=element?.toHex({ excludeSignatures: true, excludeAuthorizations: true });
         }
         if(!elementBytes) {
-            elementBytes=element?.toHash('hex', {excludeSignatures: true, excludeAuthorization: true });
+            elementBytes=element?.toHash('hex', {excludeSignatures: true, excludeAuthorizations: true });
         }
         if(!elementBytes) {
             return {valid: false, error: 'Element bytes are required for verification.'};
@@ -235,10 +258,33 @@ export class Authorization {
         const signingMessage = new SignableMessage(elementBytes);
         const valid = signingMessage.verify(this.signature, this.publicKey ?? publicKey);
         if(!valid) {
-            console.log('Invalid signature.', this.toJSON());
             return {valid: false, error: 'Invalid signature.'};
         }
         return {valid: true, error: ''};
+    }
+
+
+    async sign(element, signer) {
+        const isDocument = element && element.toHex;
+        if(!isDocument){
+            throw new Error('Document is not a valid document');
+        }
+        try {
+            const hashMessage = element.toHash('hex', {excludeSignatures: true, excludeAuthorizations: true});
+            const hexMessage = element.toHex({excludeSignatures: true, excludeAuthorizations: true});
+            const signingElement = hexMessage.length > 8192 ? hashMessage : hexMessage;
+            const signingMessage = SignableMessage.fromHex(signingElement);
+            const [signature, publicKey] = signingMessage.sign(signer);
+            this.signature = signature;
+            this.publicKey = publicKey;
+            this.moniker = signer.getMoniker();
+            this.address = signer.toAddress();
+        } catch (error) {
+            throw error;
+        }
+        
+        return this;
+       
     }
 
     /**
@@ -258,10 +304,14 @@ export class Authorization {
     /**
      * Check if authorization is valid (has at least signature)
      */
-    isValid() {
+    isValid(element) {
+        if(!element) {
+            throw new Error('Element is required for verification.');
+        }
         const hasSignature = this.hasSignature();
+        
         if(!hasSignature) return false;
-        const hasValidSignatures = this.verifySignatures();
+        const hasValidSignatures = this.verifySignatures(element, this.publicKey);
         if(!hasValidSignatures) return false;
         return true;
     }

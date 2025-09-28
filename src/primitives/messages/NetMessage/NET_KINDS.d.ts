@@ -1,4 +1,3 @@
-// Assuming this file is located at src/messages/NET_KINDS.d.ts
 export declare enum NET_KINDS {
     UNKNOWN = 0,
     PEER_INFO = 1,
@@ -20,6 +19,7 @@ export declare enum NET_KINDS {
     ASSET = 17,
     IDENTITY = 18,
     GOVERNANCEPROPOSAL = 19,
-    GOVERNANCEVOTE = 20
+    GOVERNANCEVOTE = 20,
+    INSTRUCTION = 21,
 }   
 

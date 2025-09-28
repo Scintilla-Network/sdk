@@ -1,6 +1,6 @@
 {
   "name": "@scintilla-network/sdk",
-  "version": "1.0.0-beta.50",
+  "version": "1.0.2-beta.10",
   "description": "A TypeScript SDK for Node.js and Web Browsers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,6 +19,7 @@
     "lint": "eslint src --ext .ts",
     "test:asset": "litest src/primitives/Asset/Asset.spec.js",
     "test:authorization": "litest src/primitives/Authorization/Authorization.spec.js",
+    "test:authorizations": "litest src/primitives/Authorizations/Authorizations.spec.js",
     "test:clusterblock": "litest src/primitives/ClusterBlock/ClusterBlock.spec.js",
     "test:drivedata": "litest src/primitives/DriveData/DriveData.spec.js",
     "test:governanceproposal": "litest src/primitives/GovernanceProposal/GovernanceProposal.spec.js",
@@ -30,7 +31,9 @@
     "test:voucher": "litest src/primitives/Voucher/Voucher.spec.js",
     "test:identity": "litest src/primitives/Identity/Identity.spec.js",
     "test:netmessage": "litest src/primitives/messages/NetMessage/NetMessage.spec.js",
-    "test:relayblock": "litest src/primitives/RelayBlock/RelayBlock.spec.js"
+    "test:relayblock": "litest src/primitives/RelayBlock/RelayBlock.spec.js",
+    "test:stateactiondata": "litest src/primitives/StateActionData/StateActionData.spec.js",
+    "test:instruction": "litest src/primitives/Instruction/Instruction.spec.js"
   },
   "license": "MIT",
   "bugs": {
@@ -75,4 +78,4 @@
     "@truestamp/tree": "2.1.0",
     "hermodlog": "1.5.2"
   }
-}
+} 

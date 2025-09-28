@@ -8,9 +8,11 @@ import { SignableMessage, utils } from "@scintilla-network/keys";
 const { uint8array, varint } = utils;
 const { decodeVarInt, encodeVarInt } = varint;
 import makeDoc from "../../utils/makeDoc.js";
-import signDoc from "../../utils/signDoc.js";
-import verifyDoc from "../../utils/verifyDoc.js";
-import HashProof from "../HashProof/HashProof.js";
+// import signDoc from "../../utils/signDoc.js";
+//  import verifyDoc from "../../utils/verifyDoc.js";
+// import HashProof from "../HashProof/HashProof.js";
+import { Authorizations } from "../Authorizations/Authorizations.js";
+import { Authorization } from "../Authorization/Authorization.js";
 
 const VALID_STATE_ACTIONS_KIND = ['TRANSFER', "TRANSACTION", "TRANSITION", "VOUCHER", "GOVERNANCE_PROPOSAL", "GOVERNANCE_VOTE"];
 const VALID_ELEMENT_KINDS = ['HASHPROOF', ...VALID_STATE_ACTIONS_KIND];
@@ -23,7 +25,7 @@ class ClusterBlock {
         const payloadOptions = options.payload || {};
         this.payload = new ClusterBlockPayload(payloadOptions);
 
-        this.authorizations = options.authorizations || [];
+        this.authorizations = new Authorizations(options.authorizations);
     }
 
     consider(element) {
@@ -98,45 +100,38 @@ class ClusterBlock {
         return true;
     }
 
-    toUint8Array({excludeAuthorization = false} = {}) {
+    toUint8Array({excludeAuthorizations = false} = {}) {
         const headerUint8Array = this.header.toUint8Array();
         const varintHeaderUint8Array = encodeVarInt(headerUint8Array.length);
 
         const payloadUint8Array = this.payload.toUint8Array();
         const varintPayloadUint8Array = encodeVarInt(payloadUint8Array.length);
 
-        const baseLength = varintHeaderUint8Array.length + headerUint8Array.length + varintPayloadUint8Array.length + payloadUint8Array.length;
-        
-        if(!excludeAuthorization){
-            const authorizationsUint8Array = uint8array.fromString(JSON.stringify(this.authorizations));
-            const result = new Uint8Array(baseLength + authorizationsUint8Array.length);
-            let offset = 0;
-            result.set(varintHeaderUint8Array, offset); offset += varintHeaderUint8Array.length;
-            result.set(headerUint8Array, offset); offset += headerUint8Array.length;
-            result.set(varintPayloadUint8Array, offset); offset += varintPayloadUint8Array.length;
-            result.set(payloadUint8Array, offset); offset += payloadUint8Array.length;
-            result.set(authorizationsUint8Array, offset);
-            return result;
-        }
+        const authorizationsUint8Array = this.authorizations.toUint8Array();
+
+        const baseLength = varintHeaderUint8Array.length + headerUint8Array.length + varintPayloadUint8Array.length + payloadUint8Array.length + (excludeAuthorizations ? 0 : authorizationsUint8Array.length);
 
         const result = new Uint8Array(baseLength);
         let offset = 0;
         result.set(varintHeaderUint8Array, offset); offset += varintHeaderUint8Array.length;
         result.set(headerUint8Array, offset); offset += headerUint8Array.length;
         result.set(varintPayloadUint8Array, offset); offset += varintPayloadUint8Array.length;
-        result.set(payloadUint8Array, offset);
+        result.set(payloadUint8Array, offset); offset += payloadUint8Array.length;
+        if(!excludeAuthorizations){
+            result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
+        }
         return result;
     }
 
     /**
      * @deprecated Use toUint8Array instead
      */
-    toBuffer({excludeAuthorization = false} = {}) {
-        return this.toUint8Array({excludeAuthorization});
+    toBuffer({excludeAuthorizations = false} = {}) {
+        return this.toUint8Array({excludeAuthorizations});
     }
 
-    toHex({excludeAuthorization = false} = {}) {
-        return uint8array.toHex(this.toBuffer({excludeAuthorization}));
+    toHex({excludeAuthorizations = false} = {}) {
+        return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
     static fromHex(hex) {
@@ -168,17 +163,17 @@ class ClusterBlock {
         const header = ClusterBlockHeader.fromUint8Array(headerUint8Array);
         const payload = ClusterBlockPayload.fromUint8Array(payloadUint8Array);
 
-        let authorizations = [];
+        let authorizations = null;
         if (offset < uint8Array.length) {
             const authorizationsUint8Array = uint8Array.slice(offset);
-            authorizations = JSON.parse(uint8array.toString(authorizationsUint8Array));
+            authorizations = Authorizations.fromUint8Array(authorizationsUint8Array);
         }
 
         return new ClusterBlock({header, payload, authorizations});
     }
 
     toString() {
-        return uint8array.toHex(this.toBuffer());
+        return uint8array.toHex(this.toUint8Array());
     }
 
     toHash(encoding = 'hex') {
@@ -193,7 +188,7 @@ class ClusterBlock {
         return {
             header: this.header.toJSON(),
             payload: this.payload.toJSON(),
-            authorizations: this.authorizations,
+            authorizations: this.authorizations.toJSON(),
         };
     }
 
@@ -216,39 +211,37 @@ class ClusterBlock {
         return makeDoc(this, signer);   
     }
 
-    toSignableMessage({excludeAuthorization = false} = {}) {
-        return new SignableMessage(this.toHex({excludeAuthorization}));
+    toSignableMessage({excludeAuthorizations = false} = {}) {
+        return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
-    toUInt8Array({excludeAuthorization = false} = {}) {
-        return this.toBuffer({excludeAuthorization});
-    }
 
     addAuthorization(authorization) {
+        authorization = new Authorization(authorization);
         if(authorization.signature === '' || authorization.signature === undefined){
+            console.error('ClusterBlock tried to add an empty authorization.');
+            console.error(authorization);
             throw new Error('Signature is required for authorization.');
         }
-        this.authorizations.push(authorization);
+        this.authorizations.addAuthorization(authorization);
     }
 
     async sign(signer) {
-        return signDoc(await this.toDoc(signer));
-    }
-
-    verifySignatures() {
-      return verifyDoc(this);
+        this.authorizations.sign(this, signer);
+        return this;
+        // return signDoc(await this.toDoc(signer));
     }
 
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
-        const signedAuthorizations = this.authorizations.filter(authorization => authorization.signature);
+        const signedAuthorizations = this.authorizations.authorizations.filter(authorization => authorization.signature);
         if (!signedAuthorizations.length) return {valid: false, error: 'At least one authorization with signature is required.'};
 
         const authWithPublicKey = signedAuthorizations.filter(authorization => authorization.publicKey);
         if(authWithPublicKey.length < 0) return {valid: false, error: 'At least one authorization with public key is required.'};
 
-        if (!this.verifySignatures()) return {valid: false,error: 'Invalid signature.'};
+        if (!this.authorizations.verify(this)) return {valid: false,error: 'Invalid signature.'};
         return {valid: true, error: ''};
     }
 

@@ -89,4 +89,5 @@ class DriveData {
     }
 }
 
+export { DriveData };
 export default DriveData;

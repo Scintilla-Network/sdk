@@ -7,6 +7,7 @@ import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js'
 import { Voucher } from '../Voucher/Voucher.js';
 import { Transaction } from '../Transaction/Transaction.js';
 import { Transfer } from '../Transfer/Transfer.js';
+import { Transition } from '../Transition/Transition.js';
 
 export class RelayBlockPayload {
     constructor(options = {}) {
@@ -137,6 +138,11 @@ export class RelayBlockPayload {
                     const transaction = Transaction.fromUint8Array(inputArray.slice(offset, offset + actionLength));
                     offset += transaction.toUint8Array().length;
                     payloadProps.actions.push(transaction);
+                    break;
+                case NET_KINDS['TRANSITION']:
+                    const transition = Transition.fromUint8Array(inputArray.slice(offset, offset + actionLength));
+                    offset += transition.toUint8Array().length;
+                    payloadProps.actions.push(transition);
                     break;
                 default:
                     throw new Error(`Unknown action kind: ${actionKind}`);  

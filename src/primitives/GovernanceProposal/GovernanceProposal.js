@@ -1,18 +1,16 @@
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
-import { utils } from '@scintilla-network/keys';
-const { uint8array, varint, json, varbigint } = utils;
-const { encodeVarInt, decodeVarInt } = varint;
+import { sha256 } from '@scintilla-network/hashes/classic';
+import { uint8array, varint, json } from '@scintilla-network/keys/utils';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
 import makeDoc from '../../utils/makeDoc.js';
-import signDoc from '../../utils/signDoc.js';
-import verifyDoc from '../../utils/verifyDoc.js';
+// import signDoc from '../../utils/signDoc.js';
+// import verifyDoc from '../../utils/verifyDoc.js';
 import { SignableMessage } from '@scintilla-network/keys';
+import { Authorizations } from '../Authorizations/Authorizations.js';   
 
 class GovernanceProposal {
     constructor(options = {}) {
-        this.kind = 'GOVERNANCE_PROPOSAL';
+        this.kind = 'GOVERNANCEPROPOSAL';
         this.version = 1;
         this.timestamp = options.timestamp || BigInt(Date.now());
         
@@ -35,7 +33,7 @@ class GovernanceProposal {
         }
         this.proposer = options.proposer || '';
         this.dao = options.dao || '';
-        this.authorizations = (options.authorizations || []).map(auth => new Authorization(auth));
+        this.authorizations = new Authorizations(options.authorizations);
         this.hash = options.hash ?? null;
         if (!this.hash) {
             this.hash = this.computeHash();
@@ -56,11 +54,12 @@ class GovernanceProposal {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
         }
-        if(options.excludeAuthorization === undefined) {
-            options.excludeAuthorization = false;
+        if(options.excludeAuthorizations === undefined) {
+            options.excludeAuthorizations = false;
         }
 
-        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['GOVERNANCE_PROPOSAL'], 'uint8array');
+        const kind = NET_KINDS[this.kind];
+        const kindUint8Array = varint.encodeVarInt(kind, 'uint8array');
         const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
         const timestampUint8Array = varint.encodeVarInt(this.timestamp, 'uint8array');
 
@@ -113,14 +112,9 @@ class GovernanceProposal {
         const hashLengthUint8Array = varint.encodeVarInt(hashUint8Array.length, 'uint8array');
 
         // Authorizations
-        const authorizationsLengthUint8Array = varint.encodeVarInt(this.authorizations.length, 'uint8array');
-        const authorizationsUint8Array = [];
-        this.authorizations.forEach(authorization => {
-            const authorizationUint8Array = authorization.toUint8Array();
-            authorizationsUint8Array.push(...authorizationUint8Array);
-        });
+        const authorizationsUint8Array = this.authorizations.toUint8Array();
 
-        const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length)
+        const totalLength = (options.excludeKindPrefix ? 0 : kindUint8Array.length)
             + versionUint8Array.length
             + timestampUint8Array.length
             + titleLengthUint8Array.length + titleUint8Array.length
@@ -135,13 +129,13 @@ class GovernanceProposal {
             + proposerLengthUint8Array.length + proposerUint8Array.length
             + daoLengthUint8Array.length + daoUint8Array.length
             + hashLengthUint8Array.length + hashUint8Array.length
-            + (options.excludeAuthorization ? 0 : authorizationsLengthUint8Array.length + authorizationsUint8Array.length);
+            + (options.excludeAuthorizations ? 0 : authorizationsUint8Array.length);
 
         const result = new Uint8Array(totalLength);
         let offset = 0;
 
         if(options.excludeKindPrefix === false) {
-            result.set(elementKindUint8Array, offset); offset += elementKindUint8Array.length;
+            result.set(kindUint8Array, offset); offset += kindUint8Array.length;
         }
 
         result.set(versionUint8Array, offset); offset += versionUint8Array.length;
@@ -193,8 +187,7 @@ class GovernanceProposal {
         result.set(hashUint8Array, offset); offset += hashUint8Array.length;
 
         // Authorizations
-        if(options.excludeAuthorization === false) {
-            result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
+        if(options.excludeAuthorizations === false) {
             result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
         }
 
@@ -207,8 +200,8 @@ class GovernanceProposal {
 
         const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += elementKindLength;
-        if(elementKind !== NET_KINDS['GOVERNANCE_PROPOSAL']) {
-            throw new Error('Invalid element kind');
+        if(elementKind !== NET_KINDS['GOVERNANCEPROPOSAL']) {
+            throw new Error('Invalid element kind');    
         }
         proposalProps.kind = NET_KINDS_ARRAY[elementKind];
 
@@ -293,29 +286,11 @@ class GovernanceProposal {
         offset += hashLength;
 
         // Authorizations
-        const authorizations = [];
-        if (offset < inputArray.length) {
-            const {value: authorizationsAmount, length: authorizationsAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-            offset += authorizationsAmountBytes;
-            for (let i = 0; i < authorizationsAmount; i++) {
-                const authorization = Authorization.fromUint8Array(inputArray.subarray(offset));
-                const authorizationBytes = authorization.toUint8Array();
-                offset += authorizationBytes.length;
-                authorizations.push(authorization);
-            }
-        }
-        proposalProps.authorizations = authorizations;
+        const authBytes = inputArray.subarray(offset);
+        proposalProps.authorizations = Authorizations.fromUint8Array(authBytes);
+        offset += authBytes.length;
 
         return new GovernanceProposal(proposalProps);
-    }
-
-    toBuffer() {
-        return this.toUint8Array();
-    }
-
-    static fromBuffer(buffer) {
-        const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-        return GovernanceProposal.fromUint8Array(uint8Array);
     }
 
     toHex() {
@@ -343,15 +318,15 @@ class GovernanceProposal {
         if(authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
         }
-        this.authorizations.push(new Authorization(authorization));
+        this.authorizations.addAuthorization(new Authorization(authorization));
     }
 
-    verifySignature() {
-        return verifyDoc(this);
+    verifyAuthorization() {
+        return this.authorizations.verify(this);
     }
 
-    toSignableMessage({excludeAuthorization = false} = {}) {
-        return new SignableMessage(this.toHex({excludeAuthorization}));
+    toSignableMessage({excludeAuthorizations = false} = {}) {
+        return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
     toDoc(signer) {
@@ -359,19 +334,21 @@ class GovernanceProposal {
     }
 
     async sign(signer) {
-        return signDoc(await this.toDoc(signer));
+        this.authorizations.sign(this, signer);
+        return this;
+        // return signDoc(await this.toDoc(signer));
     }
 
-    toHex({excludeAuthorization = false} = {}) {
-        return uint8array.toHex(this.toUint8Array({excludeAuthorization}));
+    toHex({excludeAuthorizations = false} = {}) {
+        return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
     validate() {
-        if (!this.authorizations || this.authorizations.length === 0) {
+        if (!this.authorizations || this.authorizations.authorizations.length === 0) {
             return {valid: false, error: 'Authorizations are required.'};
         }
 
-        const signedAuthorizations = this.authorizations.filter(auth => auth.signature);
+        const signedAuthorizations = this.authorizations.authorizations.filter(auth => auth.signature);
         if (signedAuthorizations.length === 0) {
             return {valid: false, error: 'At least one authorization with signature is required.'};
         }
@@ -381,7 +358,7 @@ class GovernanceProposal {
             return {valid: false, error: 'At least one authorization with public key is required.'};
         }
 
-        if (!this.verifySignature()) {
+        if (!this.authorizations.verify(this)) {
             return {valid: false, error: 'Invalid signature.'};
         }
 
@@ -394,7 +371,7 @@ class GovernanceProposal {
         return valid;
     }
 
-    toJSON({excludeAuthorization = false} = {}) {
+    toJSON({excludeAuthorizations = false} = {}) {
         const json = {
             kind: this.kind,
             version: this.version,
@@ -413,8 +390,8 @@ class GovernanceProposal {
             dao: this.dao,
         };
 
-        if (!excludeAuthorization) {
-            json.authorizations = this.authorizations.map(auth => ({
+        if (!excludeAuthorizations) {
+            json.authorizations = this.authorizations.authorizations.map(auth => ({
                 ...auth,
                 signature: auth.signature ? uint8array.toHex(auth.signature) : '',
                 publicKey: auth.publicKey ? uint8array.toHex(auth.publicKey) : ''

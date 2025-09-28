@@ -1,8 +1,5 @@
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
-import { utils } from '@scintilla-network/keys';
-const { uint8array, varint } = utils;
-const { decodeVarInt, encodeVarInt } = varint;
+import { sha256} from '@scintilla-network/hashes/classic';
+import { uint8array, varint }  from '@scintilla-network/keys/utils';
 
 export class ClusterBlockHeader {
     constructor(options = {}) {
@@ -30,10 +27,10 @@ export class ClusterBlockHeader {
         const previousHashUint8Array = this.previousHash ? uint8array.fromHex(this.previousHash) : new Uint8Array(32);
 
         const clusterUint8Array = uint8array.fromString(this.cluster);
-        const varIntClusterLength = encodeVarInt(clusterUint8Array.length);
+        const varIntClusterLength = varint.encodeVarInt(clusterUint8Array.length);
 
         const proposerUint8Array = this.proposer ? uint8array.fromString(this.proposer) : new Uint8Array(0);
-        const varIntProposerLength = this.proposer ? encodeVarInt(proposerUint8Array.length) : new Uint8Array(0);
+        const varIntProposerLength = this.proposer ? varint.encodeVarInt(proposerUint8Array.length) : new Uint8Array(0);
 
         const totalLength = versionUint8Array.length + heightUint8Array.length + timestampUint8Array.length + previousHashUint8Array.length + varIntClusterLength.length + clusterUint8Array.length + varIntProposerLength.length + proposerUint8Array.length;
         const result = new Uint8Array(totalLength);
@@ -46,7 +43,7 @@ export class ClusterBlockHeader {
         result.set(varIntClusterLength, offset); offset += varIntClusterLength.length;
         result.set(clusterUint8Array, offset); offset += clusterUint8Array.length;
         result.set(varIntProposerLength, offset); offset += varIntProposerLength.length;
-        result.set(proposerUint8Array, offset);
+        result.set(proposerUint8Array, offset); offset += proposerUint8Array.length;
         
         return result;
     }
@@ -60,37 +57,34 @@ export class ClusterBlockHeader {
     static fromUint8Array(uint8Array) {
         let offset = 0;
 
-        const versionView = new DataView(uint8Array.buffer, uint8Array.byteOffset + offset, 4);
-        const version = versionView.getInt32(0, false);
-        offset += 4;
+        const { value: version, length: versionLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += versionLength;
 
-        const heightView = new DataView(uint8Array.buffer, uint8Array.byteOffset + offset, 4);
-        const height = heightView.getInt32(0, false);
-        offset += 4;
+        const { value: height, length: heightLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += heightLength;
 
-        const timestampView = new DataView(uint8Array.buffer, uint8Array.byteOffset + offset, 8);
-        const timestamp = timestampView.getBigInt64(0, false);
-        offset += 8;
+        const { value: timestamp, length: timestampLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += timestampLength;
 
         const previousHashUint8Array = uint8Array.slice(offset, offset + 32);
         const previousHash = uint8array.toHex(previousHashUint8Array);
         offset += 32;
 
-        const { value: clusterLength, length: varIntClusterLength } = decodeVarInt(uint8Array.slice(offset));
+        const { value: clusterLength, length: varIntClusterLength } = varint.decodeVarInt(uint8Array.slice(offset));
         offset += varIntClusterLength;
-        const clusterUint8Array = uint8Array.slice(offset, offset + Number(clusterLength));
+        const clusterUint8Array = uint8Array.slice(offset, offset + clusterLength);
         const cluster = uint8array.toString(clusterUint8Array);
-        offset += Number(clusterLength);
+        offset += clusterLength;
 
-        const { value: proposerLength, length: varIntProposerLength } = decodeVarInt(uint8Array.slice(offset));
+        const { value: proposerLength, length: varIntProposerLength } = varint.decodeVarInt(uint8Array.slice(offset));
         offset += varIntProposerLength;
-        const proposerUint8Array = uint8Array.slice(offset, offset + Number(proposerLength));
+        const proposerUint8Array = uint8Array.slice(offset, offset + proposerLength);
         const proposer = uint8array.toString(proposerUint8Array);
 
         return new ClusterBlockHeader({
             version: version,
             height,
-            timestamp: Number(timestamp),
+            timestamp: BigInt(timestamp),
             previousHash: previousHash.length > 0 && !previousHash.match(/^0+$/) ? previousHash : null,
             cluster,
             proposer: proposer.length > 0 ? proposer : null

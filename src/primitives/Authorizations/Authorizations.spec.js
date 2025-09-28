@@ -1,41 +1,90 @@
-// import { describe, it, expect } from 'vitest';
+// // import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
-import { Authorization } from './Authorization.js';
-import { Signer, utils } from '@scintilla-network/keys';
-const { uint8array } = utils;
-
-
+import { Authorizations } from './Authorizations.js';
 import { Asset } from '../Asset/Asset.js';
+// import { utils } from '@scintilla-network/keys';
+// const { uint8array } = utils;
 
+import { Authorization } from '../Authorization/Authorization.js';
+import { Signer } from '@scintilla-network/keys';
+import { uint8array } from '@scintilla-network/keys/utils';
 
-describe('Authorization', () => {
-    it('should create a Authorization instance', async () => {
-        
-        const element = new Asset({
-            name: 'CustomAsset',
-            symbol: 'CAT',
-        });
+import { Transaction } from '../Transaction/Transaction.js';
+import { Transfer } from '../Transfer/Transfer.js';
+import { Transition } from '../Transition/Transition.js';
+import { Voucher } from '../Voucher/Voucher.js';
+import StateActionData from '../StateActionData/StateActionData.js';
+// import { ClusterBlock } from '../ClusterBlock/ClusterBlock.js';
+import {HashProof} from '../HashProof/HashProof.js';
+
+describe('Authorizations', () => {
+    it('should create a Authorizations instance', async () => {
+
+        // const element = new Asset({ 
+            // name: 'CustomAsset',
+            // symbol: 'CAT',
+        // });
         const signer = new Signer(uint8array.fromHex('337adff26342dfbf2bf140532ebd1c77fcd5a23a520a07a83fb78969821070b3'), 'test_moniker');
-        // const authorization = await Authorization.sign(element, signer);
+        
+        // const transfer = new Transition();
+        // await transfer.sign(signer);
+        // console.log(transfer.authorizations.authorizations);
 
-        const authorization = new Authorization();
-        authorization.sign(element, signer);
-        authorization.verify(element);
 
-        console.log(authorization);
+        const element = new Transition();
+        // const element = new Authorizations();
+        await element.sign(signer);
+        // console.log(element);
+        console.log(`\n====================== TO UINT8ARRAY ======================`);
+        const array = element.toUint8Array();
+        console.log(`\n====================== FROM UINT8ARRAY ======================`);
+        // console.log(Transfer.fromUint8Array(array));
+        // console.log(array);
+        const parsed = Transition.fromUint8Array(array);
+        // console.log(`====================== FROM UINT8ARRAY ======================`);
+        // console.log(parsed.authorizations.authorizations);
 
+        console.log(element.toHash());
+        console.log(parsed.toHash());
+        // const hasMoniker = !!parsed.authorizations.find(authorization => authorization.moniker === 'test_moniker');
+        // const hashesMatch = parsed.authorizations.toHash() === element.authorizations.toHash();
+        // console.log({hasMoniker});
+        // console.log({hashesMatch});
+        // const parsed = Transition.fromHex(transfer.toHex());
+
+        // console.log(parsed.authorizations.authorizations);
+
+        // const parsed = Transaction.fromUint8Array(transfer.toUint8Array());
+        // console.log(parsed.authorizations.authorizations);
+        // console.log(parsed.authorizations.verify(parsed));
+        // const authorizations = new Authorizations();
+        // await authorizations.sign(element, signer);
+        // console.log(authorizations);
+        // const valid = authorizations.verify(element);
+        // console.log({valid});
+
+        // const parsed = Authorizations.fromUint8Array(authorizations.toUint8Array());
+        // console.log(authorizations.toHash());
+        // console.log(parsed.toHash());
+        // const relayBlock = new RelayBlock();
+        // relayBlock.sign(signer);
+        // const parsed = RelayBlock.fromHex(relayBlock.toHex());
+        // console.log(parsed.authorizations);
+        // console.log(relayBlock.authorizations);
+        // console.log(relayBlock.toHash());
+        // console.log(parsed.toHash());
+        // console.log(relayBlock.authorizations.verify(relayBlock));
     });
 });
 
-
-// describe.skip('Authorization', () => {
+// describe('Authorization', () => {
 //     // Test data
 //     const testSignature = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 //     const testPublicKey = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab';
 //     const testMoniker = 'test_moniker';
 //     const testAddress = 'scintilla1abc123def456';
 
-//     describe,skip('Constructor', () => {
+//     describe('Constructor', () => {
 //         it('should create empty authorization with no parameters', () => {
 //             const auth = new Authorization();
 //             expect(auth.signature).toBeNull();

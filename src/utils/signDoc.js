@@ -1,5 +1,6 @@
 import { SignableMessage } from "@scintilla-network/keys";
 import { NetMessage } from "../primitives/messages/NetMessage/NetMessage.js";
+import { Authorization } from "../primitives/Authorization/Authorization.js";
 
 // interface IAuthorization {
 //     signature: string;
@@ -63,29 +64,37 @@ export default function signDoc(doc, hash, _options = {}){
     // If the document has a .authorizations property, add the signature to the first authorization
     // Except if turned off
     if(options.addSignatureToAuthorization){
-        if(element.authorizations){
-            const authorization = {
-                signature: signature,
-                publicKey: publicKey,
-                address,
-            }
-            if(current.moniker){
-                authorization.moniker = current.moniker;
-            }
-            element.authorizations.push(authorization);
-        } else if(element.signatures){
-            const sig = {
-                signature: signature,
-                publicKey: publicKey,
-                address,
-            }
-            if(current.moniker){
-                sig.moniker = current.moniker;
-            }
-            element.signatures.push(sig);
-        } else {
-            console.warn('No authorizations found in document, skipping signature addition');
-        }
+        // if(element.authorizations){
+        //     const authorization = {
+        //         signature: signature,
+        //         publicKey: publicKey,
+        //         address,
+        //     }
+        //     if(current.moniker){
+        //         authorization.moniker = current.moniker;
+        //     }
+        //     element.authorizations.push(authorization);
+        // } else if(element.signatures){
+        //     const sig = {
+        //         signature: signature,
+        //         publicKey: publicKey,
+        //         address,
+        //     }
+        //     if(current.moniker){
+        //         sig.moniker = current.moniker;
+        //     }
+        //     element.signatures.push(sig);
+        // } else {
+        //     console.warn('No authorizations found in document, skipping signature addition');
+        // }
+
+        const authorization = new Authorization({
+            signature,
+            publicKey,
+            address,
+            moniker: current.moniker,
+        });
+        element.authorizations.addAuthorization(authorization);
     }
 
     function toNetMessage(){

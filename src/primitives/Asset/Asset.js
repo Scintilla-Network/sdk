@@ -48,6 +48,7 @@ class Asset {
                     metadata = {}
                 } = {}) {
 
+        this.kind = 'ASSET';
         this.name = name ?? 'UNDEFINED';
         this.symbol = symbol ?? 'UNDEFINED';
         this.supply =  { max: 100_000_000n * 10n**9n, total: 0n, circulating: 0n, ...supply };
@@ -282,6 +283,7 @@ class Asset {
      */
     toJSON() {
         return {
+            kind: this.kind,
             name: this.name,
             symbol: this.symbol,
             supply: {

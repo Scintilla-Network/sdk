@@ -56,7 +56,7 @@ const transfer = new Transfer({
 - `toBuffer()`: Converts the transfer to a buffer.
 - `fromBuffer()`: Converts a buffer to a transfer.
 - `toHex()`: Converts the transfer to a hex string.
-- `toUInt8Array()`: Converts the transfer to a uint8 array.
+- `toUint8Array()`: Converts the transfer to a uint8 array.
 - `toHash()`: Converts the transfer to a hash.
 - `toJSON()`: Converts the transfer to a JSON object.
 - `verifySignature()`: Verifies the signature of the transfer.

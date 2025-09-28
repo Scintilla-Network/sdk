@@ -145,7 +145,7 @@ class HashProofPayload {
 
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
-        return this.fromBuffer(uint8Array);
+        return this.fromUint8Array(uint8Array);
     }
 
     static fromUint8Array(inputArray) {

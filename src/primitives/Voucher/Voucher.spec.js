@@ -169,7 +169,7 @@ describe('Voucher', () => {
     //     const hex = voucher.toHex();
     //     expect(typeof hex).toBe('string');
         
-    //     const uint8Array = voucher.toUInt8Array();
+    //     const uint8Array = voucher.toUint8Array();
     //     expect(uint8Array instanceof Uint8Array).toBe(true);
     // });
 

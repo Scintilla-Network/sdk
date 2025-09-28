@@ -16,5 +16,6 @@ declare class DriveData {
     static fromJSON(json: IDriveDataOptions): DriveData;
 }
 
+export { DriveData };
 export default DriveData;
 

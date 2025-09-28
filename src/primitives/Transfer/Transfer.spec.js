@@ -55,9 +55,9 @@ describe('Transfer', () => {
         expect(transfer.toHex).toBeDefined();
     });
 
-    it('should have a toUInt8Array method', () => {
+    it('should have a toUint8Array method', () => {
         const transfer = new Transfer();
-        expect(transfer.toUInt8Array).toBeDefined();
+        expect(transfer.toUint8Array).toBeDefined();
     });
 
     it('should have a toHash method', () => {

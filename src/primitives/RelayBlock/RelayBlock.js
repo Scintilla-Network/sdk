@@ -1,16 +1,13 @@
 import { RelayBlockHeader } from './RelayBlockHeader.js';
 import {RelayBlockPayload} from "./RelayBlockPayload.js";
-// import {sha256} from "../../utils/hash.js";
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
+import { sha256 } from '@scintilla-network/hashes/classic';
 
-import signDoc from '../../utils/signDoc.js';
 import makeDoc from '../../utils/makeDoc.js';
-import verifyDoc from '../../utils/verifyDoc.js';
 import { SignableMessage } from '@scintilla-network/keys';
-import { uint8array, varint, json } from '@scintilla-network/keys/utils';
+import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { NET_KINDS } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
+import { Authorizations } from '../Authorizations/Authorizations.js';
 
 export class RelayBlock {
     constructor(options = {}) {
@@ -18,7 +15,7 @@ export class RelayBlock {
         this.version = 1;
         this.header = new RelayBlockHeader(options.header);
         this.payload = new RelayBlockPayload(options.payload);
-        this.authorizations = options.authorizations || [];
+        this.authorizations = new Authorizations(options.authorizations);
     }
 
 
@@ -55,7 +52,7 @@ export class RelayBlock {
         offset += authorizationsLengthBytes;
 
         const authorizationsUint8Array = inputArray.slice(offset, offset + authorizationsLength);
-        const authorizations = authorizationsUint8Array.map(authorization => Authorization.fromUint8Array(authorization));
+        const authorizations = Authorizations.fromUint8Array(authorizationsUint8Array);
         offset += authorizationsLength;
 
         return new RelayBlock({
@@ -74,8 +71,8 @@ export class RelayBlock {
 
 
     toUint8Array(options = {}) {
-        if(options.excludeAuthorization === undefined) {
-            options.excludeAuthorization = false;
+        if(options.excludeAuthorizations === undefined) {
+            options.excludeAuthorizations = false;
         }
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -90,14 +87,21 @@ export class RelayBlock {
         const payloadUint8Array = this.payload.toUint8Array();
         const payloadLengthUint8Array = varint.encodeVarInt(payloadUint8Array.length, 'uint8array');
         
-        const authorizationsUint8Array = this.authorizations.map(authorization => authorization.toUint8Array());
+        // let authorizationsUint8Array = new Uint8Array();
+        // for(let i = 0; i < this.authorizations.length; i++) {
+        //     const authorizationUint8Array = this.authorizations[i].toUint8Array();
+        //     authorizationsUint8Array = new Uint8Array([...authorizationsUint8Array, ...authorizationUint8Array]);
+        // }
+
+        // const authorizationsLengthUint8Array = varint.encodeVarInt(authorizationsUint8Array.length, 'uint8array');
+        const authorizationsUint8Array = this.authorizations.toUint8Array();
         const authorizationsLengthUint8Array = varint.encodeVarInt(authorizationsUint8Array.length, 'uint8array');
         
         const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
         + versionUint8Array.length 
         + headerLengthUint8Array.length + headerUint8Array.length 
         + payloadLengthUint8Array.length + payloadUint8Array.length 
-        + authorizationsLengthUint8Array.length + authorizationsUint8Array.length;
+        + (options.excludeAuthorizations === true ? 0 : authorizationsLengthUint8Array.length + authorizationsUint8Array.length);
         const result = new Uint8Array(totalLength);
 
         let offset = 0;
@@ -109,7 +113,7 @@ export class RelayBlock {
         result.set(headerUint8Array, offset); offset += headerUint8Array.length;
         result.set(payloadLengthUint8Array, offset); offset += payloadLengthUint8Array.length;
         result.set(payloadUint8Array, offset); offset += payloadUint8Array.length;
-        if(options.excludeAuthorization === false) {
+        if(options.excludeAuthorizations !== true) {
             result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
             result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
         }
@@ -140,138 +144,52 @@ export class RelayBlock {
         this.payload.considerCluster(clusterMoniker, clusterHash);
     }
 
-    addSignature(signature) {
-        if(signature.signature === '' || signature.signature === undefined){
-            console.error('RelayBlock tried to add an empty signature.');
-            console.error(signature);
-            throw new Error('Signature is required for authorization.');
-        }
-        this.signatures.push(signature);
-    }
-
-    toSignableMessage({excludeAuthorization = false} = {}) {
-        return new SignableMessage(this.toHex({excludeSignatures: excludeAuthorization}));
-    }
-
-    verifySignature() {
-        return verifyDoc(this);
-    }
-
-
     addAuthorization(authorization) {
+        authorization = new Authorization(authorization);
         if(authorization.signature === '' || authorization.signature === undefined){
-            throw new Error('Signature is required for authorization.');
+            console.error('RelayBlock tried to add an empty authorization.');
+            throw new Error('Authorization is required for authorization.');
         }
-        this.signatures.push(authorization);
+        this.authorizations.addAuthorization(authorization);
     }
 
-    async sign(signer) {
-        const doc = await this.toDoc(signer);
-        const hash = this.toHash('hex');
-        return signDoc(doc, hash);
+    toSignableMessage({excludeAuthorizations = false} = {}) {
+        return new SignableMessage(this.toHex({excludeAuthorizations: excludeAuthorizations}));
     }
 
-    toBuffer({excludeSignatures = false} = {}) {
-        const headerUint8Array = this.header.toUint8Array();
-        const dataUint8Array = this.payload.toUint8Array();
-
-        const headerLengthUint8Array = new Uint8Array(4);
-        const headerLengthView = new DataView(headerLengthUint8Array.buffer);
-        headerLengthView.setInt32(0, headerUint8Array.length, false);
-
-        const dataLengthUint8Array = new Uint8Array(4);
-        const dataLengthView = new DataView(dataLengthUint8Array.buffer);
-        dataLengthView.setInt32(0, dataUint8Array.length, false);
-
-        if(!excludeSignatures){
-            const signaturesUint8Array = uint8array.fromString(json.stringify(this.authorizations));
-            const signaturesLengthUint8Array = new Uint8Array(4);
-            const signaturesLengthView = new DataView(signaturesLengthUint8Array.buffer);
-            signaturesLengthView.setInt32(0, signaturesUint8Array.length, false);
-            
-            const result = new Uint8Array(headerLengthUint8Array.length + headerUint8Array.length + dataLengthUint8Array.length + dataUint8Array.length + signaturesLengthUint8Array.length + signaturesUint8Array.length);
-            let offset = 0;
-            result.set(headerLengthUint8Array, offset); offset += headerLengthUint8Array.length;
-            result.set(headerUint8Array, offset); offset += headerUint8Array.length;
-            result.set(dataLengthUint8Array, offset); offset += dataLengthUint8Array.length;
-            result.set(dataUint8Array, offset); offset += dataUint8Array.length;
-            result.set(signaturesLengthUint8Array, offset); offset += signaturesLengthUint8Array.length;
-            result.set(signaturesUint8Array, offset);
-            return result;
-        }
-
-        const result = new Uint8Array(headerLengthUint8Array.length + headerUint8Array.length + dataLengthUint8Array.length + dataUint8Array.length);
-        let offset = 0;
-        result.set(headerLengthUint8Array, offset); offset += headerLengthUint8Array.length;
-        result.set(headerUint8Array, offset); offset += headerUint8Array.length;
-        result.set(dataLengthUint8Array, offset); offset += dataLengthUint8Array.length;
-        result.set(dataUint8Array, offset);
-        return result;
+    verifyAuthorization() {
+        return this.authorizations.verify(this);
     }
 
-    toHex({excludeSignatures = false} = {}) {
-        return uint8array.toHex(this.toBuffer({excludeSignatures}));
+
+    sign(signer) {
+        this.authorizations.sign(this, signer);
+        return this;
     }
-
-    static fromBuffer(buffer) {
-        const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-        let offset = 0;
-
-        const headerLengthView = new DataView(uint8Array.buffer, uint8Array.byteOffset + offset, 4);
-        const headerLength = headerLengthView.getInt32(0, false);
-        offset += 4;
-        
-        const headerUint8Array = uint8Array.slice(offset, offset + headerLength);
-        const header = RelayBlockHeader.fromUint8Array(headerUint8Array);
-        offset += headerLength;
-
-        const dataLengthView = new DataView(uint8Array.buffer, uint8Array.byteOffset + offset, 4);
-        const dataLength = dataLengthView.getInt32(0, false);
-        offset += 4;
-        
-        const dataUint8Array = uint8Array.slice(offset, offset + dataLength);
-        const payload = RelayBlockPayload.fromUint8Array(dataUint8Array);
-        offset += dataLength;
-
-        let signatures = [];
-        if (offset < uint8Array.length) {
-            const signaturesLengthView = new DataView(uint8Array.buffer, uint8Array.byteOffset + offset, 4);
-            const signaturesLength = signaturesLengthView.getInt32(0, false);
-            offset += 4;
-
-            if (signaturesLength > 0) {
-                const signaturesUint8Array = uint8Array.slice(offset, offset + signaturesLength);
-                signatures = JSON.parse(uint8array.toString(signaturesUint8Array));
-            }
-        }
-
-        return new RelayBlock({
-            header: header.toJSON(),
-            payload: payload.toJSON(),
-            signatures,
-        });
+    toHex({excludeAuthorizations = false} = {}) {
+        return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
-        return RelayBlock.fromBuffer(uint8Array);
+        return RelayBlock.fromUint8Array(uint8Array);
     }
 
-    toJSON({excludeSignatures = false} = {}) {
+    toJSON({excludeAuthorizations = true} = {}) {
         const obj = {
             header: this.header.toJSON(),
             payload: this.payload.toJSON(),
         };
 
-        if (!excludeSignatures) {
-            obj['signatures'] = this.signatures;
+        if (!excludeAuthorizations) {
+            obj['authorizations'] = this.authorizations.toJSON();
         }
 
         return obj;
     }
 
-    toHash(encoding = 'hex', {excludeSignatures = true} = {}) {
-        const uint8Array = this.toBuffer({excludeSignatures});
+    toHash(encoding = 'hex', {excludeAuthorizations = false} = {}) {
+        const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
     }
@@ -281,19 +199,19 @@ export class RelayBlock {
     }
 
     validate() {
-        if (!this.signatures) return {valid: false, error: 'Signatures are required.'};
+        if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
-        const signedSignatures = this.signatures.filter(signature => signature.signature);
-        if (!signedSignatures.length) return {valid: false, error: 'At least one authorization with signature is required.'};
+        const signedAuthorizations = this.authorizations.authorizations.filter(authorization => authorization.signature);
+        if (!signedAuthorizations.length) return {valid: false, error: 'At least one authorization with signature is required.'};
 
-        const authWithPublicKey = signedSignatures.filter(signature => signature.publicKey);
+        const authWithPublicKey = signedAuthorizations.filter(authorization => authorization.publicKey);
         if(authWithPublicKey.length < 0) return {valid: false, error: 'At least one authorization with public key is required.'};
 
         // proposer has signed the block
-        const proposerSignature = this.signatures.find(signature => signature.moniker === this.header.proposer);
-        if(!proposerSignature) return {valid: false, error: 'Proposer signature is required.'};
+        const proposerAuthorization = this.authorizations.authorizations.find(authorization => authorization.moniker === this.header.proposer);
+        if(!proposerAuthorization) return {valid: false, error: 'Proposer authorization is required.'};
 
-        if (!this.verifySignature()) return {valid: false,error: 'Invalid signature.'};
+        if (!this.verifyAuthorization()) return {valid: false,error: 'Invalid authorization.'};
         return {valid: true, error: ''};
     }
 

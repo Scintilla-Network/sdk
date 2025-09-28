@@ -3,6 +3,7 @@
 // globalThis.Buffer = BufferPolyfill
 //
 export { default as Asset } from './primitives/Asset/Asset.js'
+export { default as Authorization } from './primitives/Authorization/Authorization.js'
 
 export { default as BigDecimal } from './primitives/BigDecimal/BigDecimal.js' 
 export { default as RelayBlock } from './primitives/RelayBlock/RelayBlock.js'
@@ -22,6 +23,8 @@ export { default as Transaction } from './primitives/Transaction/Transaction.js'
 export { default as Transition } from './primitives/Transition/Transition.js'
 export { default as Transfer } from './primitives/Transfer/Transfer.js'
 export { default as Voucher } from './primitives/Voucher/Voucher.js'
+export { default as StateActionData } from './primitives/StateActionData/StateActionData.js'
+export { default as Instruction } from './primitives/Instruction/Instruction.js'
 
 export * as messages from './primitives/messages/messages.js'
 

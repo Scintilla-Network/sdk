@@ -1,14 +1,16 @@
 import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from '@scintilla-network/keys';
-import { uint8array, json, varint, varbigint, utf8 } from '@scintilla-network/keys/utils';
+import { uint8array, json, varint, varbigint } from '@scintilla-network/keys/utils';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
 import { Asset } from '../Asset/Asset.js';
 import { Identity } from '../Identity/Identity.js';
 import { Voucher } from '../Voucher/Voucher.js';
 import GovernanceProposal from '../GovernanceProposal/GovernanceProposal.js';
+import { StateActionData } from '../StateActionData/StateActionData.js';
 
 import GovernanceVote from '../GovernanceVote/GovernanceVote.js';
+import { Authorizations } from '../Authorizations/Authorizations.js';
 
 import makeDoc from '../../utils/makeDoc.js';
 import signDoc from '../../utils/signDoc.js';
@@ -22,18 +24,16 @@ export class Transaction {
         this.cluster = props.cluster || null;
         this.action = props.action || null;
         this.type = props.type || null;
-        this.data = props.data || [];
+        this.data = new StateActionData(props.data);
         this.timestamp = props.timestamp || BigInt(Date.now());
 
-        this.authorizations = props.authorizations || [];
+        this.authorizations = new Authorizations(props.authorizations);
         this.fees = props.fees || [];
         this.version = props.version || 1;
 
         this.timelock = props.timelock ?? {startTick: 0n, endTick: 0n};
 
-        this.authorizations = this.authorizations.map(authorization => {
-            return new Authorization(authorization);
-        });
+
     }
 
     setTimelock(startTick, endTick) {
@@ -49,8 +49,8 @@ export class Transaction {
     }
 
     toUint8Array(options = {}) {
-        if(options.excludeAuthorization === undefined) {
-            options.excludeAuthorization = false;
+        if(options.excludeAuthorizations === undefined) {
+            options.excludeAuthorizations = false;
         }
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -62,28 +62,16 @@ export class Transaction {
         const clusterUint8Array = uint8array.fromString(this.cluster || '');
         const clusterLengthUint8Array = varint.encodeVarInt(clusterUint8Array.length, 'uint8array');
 
+        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
+
         const actionUint8Array = uint8array.fromString(this.action || '');
         const actionLengthUint8Array = varint.encodeVarInt(actionUint8Array.length, 'uint8array');
         
         const typeUint8Array = uint8array.fromString(this.type || '');
         const typeLengthUint8Array = varint.encodeVarInt(typeUint8Array.length, 'uint8array');
-        
-        // Data is an object, serialize as JSON string
-        const dataAmountBytes = varint.encodeVarInt(this.data.length, 'uint8array');
-
-        const dataUint8Array = [];
-        for(let i = 0; i < this.data.length; i++) {
-            let dataElement;
-            if(this.data[i]?.toUint8Array) {
-                dataElement = this.data[i].toUint8Array();
-            } else {
-                dataElement = uint8array.fromString(json.stringify(this.data[i]));
-            }
-            const dataLength = varint.encodeVarInt(dataElement.length, 'uint8array');
-            dataUint8Array.push(...dataLength, ...dataElement);
-        }
-
-        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
+       
+        const dataUint8Array = this.data.toUint8Array();
+        const dataTotalLengthUint8Array = varint.encodeVarInt(dataUint8Array.length, 'uint8array');
 
         const feeAmount = this.fees.length;
         const feeAmountBytes = varint.encodeVarInt(this.fees.length, 'uint8array');
@@ -100,23 +88,23 @@ export class Transaction {
         const timelockUint8Array = uint8array.fromString(timelockString);
         const timelockLengthUint8Array = varint.encodeVarInt(timelockUint8Array.length, 'uint8array');
 
-        const authorizationsLengthUint8Array = varint.encodeVarInt(this.authorizations.length, 'uint8array');
-        const authorizationsUint8Array = [];
-        this.authorizations.forEach(authorization => {
+        // const authorizationsLengthUint8Array = varint.encodeVarInt(this.authorizations.authorizations.length, 'uint8array');
+        const authorizationsUint8Array = this.authorizations.toUint8Array();
+        /*this.authorizations.forEach(authorization => {
             const authorizationUint8Array = authorization.toUint8Array();
             authorizationsUint8Array.push(...authorizationUint8Array);
-        });
+        });*/
 
         const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
         + versionUint8Array.length 
         + clusterLengthUint8Array.length + clusterUint8Array.length 
+        + timestampUint8Array.length
         + actionLengthUint8Array.length + actionUint8Array.length 
         + typeLengthUint8Array.length + typeUint8Array.length 
-        + dataAmountBytes.length +  dataUint8Array.length 
-        + timestampUint8Array.length
+        + dataTotalLengthUint8Array.length +  dataUint8Array.length 
         + feeAmountBytes.length + feesUint8Array.length 
         + timelockLengthUint8Array.length + timelockUint8Array.length
-        + (options.excludeAuthorization ? 0 : authorizationsLengthUint8Array.length + authorizationsUint8Array.length);
+        + (options.excludeAuthorizations ? 0 : authorizationsUint8Array.length);
 
         const result = new Uint8Array(totalLength);
 
@@ -127,25 +115,29 @@ export class Transaction {
         result.set(versionUint8Array, offset); offset += versionUint8Array.length;
         result.set(clusterLengthUint8Array, offset); offset += clusterLengthUint8Array.length;
         result.set(clusterUint8Array, offset); offset += clusterUint8Array.length;
+        result.set(timestampUint8Array, offset); offset += timestampUint8Array.length;
         result.set(actionLengthUint8Array, offset); offset += actionLengthUint8Array.length;
         result.set(actionUint8Array, offset); offset += actionUint8Array.length;
         result.set(typeLengthUint8Array, offset); offset += typeLengthUint8Array.length;
         result.set(typeUint8Array, offset); offset += typeUint8Array.length;
-        result.set(dataAmountBytes, offset); offset += dataAmountBytes.length;
+        result.set(dataTotalLengthUint8Array, offset); offset += dataTotalLengthUint8Array.length;
         result.set(dataUint8Array, offset); offset += dataUint8Array.length;
-        result.set(timestampUint8Array, offset); offset += timestampUint8Array.length;
         result.set(feeAmountBytes, offset); offset += feeAmountBytes.length;
         result.set(feesUint8Array, offset); offset += feesUint8Array.length;
         result.set(timelockLengthUint8Array, offset); offset += timelockLengthUint8Array.length;
         result.set(timelockUint8Array, offset); offset += timelockUint8Array.length;
-        if(options.excludeAuthorization === false) {
-            result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
+        if(options.excludeAuthorizations === false) {
+            // result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
             result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
         }
 
         return result;
     }
 
+    static fromHex(inputHex){
+        return this.fromUint8Array(uint8array.fromHex(inputHex));
+    }
+    
     static fromUint8Array(inputArray) {
         const transactionProps = {};
         let offset = 0;
@@ -167,6 +159,11 @@ export class Transaction {
         transactionProps.cluster = uint8array.toString(inputArray.subarray(offset, offset + clusterLength));
         offset += clusterLength;
 
+        // Timestamp
+        const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        transactionProps.timestamp = timestamp;
+        offset += timestampBytes;
+
         // Action
         const {value: actionLength, length: actionLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += actionLengthBytes;
@@ -180,45 +177,10 @@ export class Transaction {
         offset += typeLength;
 
         // Data
-        const {value: dataAmountValue, length: dataAmountLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += dataAmountLengthBytes;
-
-        transactionProps.data = [];
-
-        for (let i = 0; i < dataAmountValue; i++) {
-            const {value: itemLength, length: itemLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-            offset += itemLengthBytes;
-            const itemBytes = inputArray.subarray(offset, offset + itemLength);
-            const itemKind = inputArray[offset];
-            let item;
-            switch (itemKind) {
-                case NET_KINDS['ASSET']:
-                    item = Asset.fromUint8Array(itemBytes);
-                    break;
-                case NET_KINDS['IDENTITY']:
-                    item = Identity.fromUint8Array(itemBytes);
-                    break;
-                case NET_KINDS['VOUCHER']:
-                    item = Voucher.fromUint8Array(itemBytes);
-                    break;
-                case NET_KINDS['GOVERNANCEPROPOSAL']:
-                    item = GovernanceProposal.fromUint8Array(itemBytes);
-                    break;
-                case NET_KINDS['GOVERNANCEVOTE']:
-                    item = GovernanceVote.fromUint8Array(itemBytes);
-                    break;
-                default:
-                    item = json.parse(uint8array.toString(itemBytes));
-            }
-            offset += itemLength;
-            transactionProps.data.push(item);   
-        }
-
-        // Timestamp
-        const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        transactionProps.timestamp = timestamp;
-        offset += timestampBytes;
-     
+        const {value: dataTotalLength, length: dataTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += dataTotalLengthBytes;
+        transactionProps.data = StateActionData.fromUint8Array(inputArray.subarray(offset, offset + dataTotalLength));
+        offset += dataTotalLength;
 
         // Fees
         const {value: feeAmount, length: feeAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
@@ -242,58 +204,41 @@ export class Transaction {
         offset += timelockLength;
 
         // Authorizations
-        const {value: authorizationsLength, length: authorizationsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += authorizationsLengthBytes;
-        transactionProps.authorizations = [];
-        for (let i = 0; i < authorizationsLength; i++) {
-            const authorization = Authorization.fromUint8Array(inputArray.subarray(offset));
-            const authorizationBytes = authorization.toUint8Array();
-            offset += authorizationBytes.length;
-            transactionProps.authorizations.push(authorization);
-        }
-
+        // const {value: authorizationsLength, length: authorizationsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        // offset += authorizationsLengthBytes;
+        const authBytes = inputArray.subarray(offset);
+        transactionProps.authorizations = Authorizations.fromUint8Array(authBytes);
+        offset += authBytes.length;
 
         return new Transaction(transactionProps);
     }
 
-    toBuffer({excludeAuthorization = false} = {}) {
-        return this.toUint8Array({excludeAuthorization});
+    toHex({excludeAuthorizations = false} = {}) {
+        return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
-    static fromBuffer(buffer) {
-        const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-        return Transaction.fromUint8Array(uint8Array);
-    }
 
-    toHex({excludeAuthorization = false} = {}) {
-        return uint8array.toHex(this.toBuffer({excludeAuthorization}));
-    }
-
-    toUInt8Array({excludeAuthorization = false} = {}) {
-        return this.toUint8Array({excludeAuthorization});
-    }
-
-    toHash(encoding = 'hex', {excludeAuthorization = true} = {}) {
-        const uint8Array = this.toUint8Array({excludeAuthorization});
+    toHash(encoding = 'hex', {excludeAuthorizations = false} = {}) {
+        const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
     }
 
-    toJSON({excludeAuthorization = false} = {}) {
+    toJSON({excludeAuthorizations = true} = {}) {
         const obj = {
             version: this.version,
             kind: this.kind,
             cluster: this.cluster,
             action: this.action,
             type: this.type,
-            data: this.data,
+            data: this.data.toJSON(),
             timestamp: this.timestamp,
             fees: this.fees,
             timelock: this.timelock,
         };
 
-        if (!excludeAuthorization) {
-            obj['authorizations'] = this.authorizations.map(authorization => {
+        if (!excludeAuthorizations) {
+            obj['authorizations'] = this.authorizations.authorizations.map(authorization => {
                 const authorizationObj = {
                     ...authorization,
                 };
@@ -314,11 +259,11 @@ export class Transaction {
         if(authorization.signature === '' || authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
         }
-        this.authorizations.push(authorization);
+        this.authorizations.addAuthorization(authorization);
     }
 
-    verifySignature() {
-        return verifyDoc(this);
+    verifyAuthorization() {
+        return this.authorizations.verify(this);
     }
 
     toBase64() {
@@ -326,8 +271,8 @@ export class Transaction {
         return btoa(String.fromCharCode(...uint8Array));
     }
 
-    toSignableMessage({excludeAuthorization = false} = {}) {
-        return new SignableMessage(this.toHex({excludeAuthorization}));
+    toSignableMessage({excludeAuthorizations = false} = {}) {
+        return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
     toDoc(signer) {
@@ -335,19 +280,21 @@ export class Transaction {
     }
 
     async sign(signer) {
-        return signDoc(await this.toDoc(signer));
+        this.authorizations.sign(this, signer);
+        return this;
+        // return signDoc(await this.toDoc(signer));
     }
 
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
-        const signedAuthorizations = this.authorizations.filter(authorization => authorization.signature);
+        const signedAuthorizations = this.authorizations.authorizations.filter(authorization => authorization.signature);
         if (!signedAuthorizations.length) return {valid: false, error: 'At least one authorization with signature is required.'};
 
         const authWithPublicKey = signedAuthorizations.filter(authorization => authorization.publicKey);
         if(authWithPublicKey.length < 0) return {valid: false, error: 'At least one authorization with public key is required.'};
 
-        if (!this.verifySignature()) return {valid: false,error: 'Invalid signature.'};
+        if (!this.verifyAuthorization()) return {valid: false,error: 'Invalid signature.'};
         return {valid: true, error: ''};
     }
 

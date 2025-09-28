@@ -7,6 +7,7 @@ import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js'
 // Maximum length of a moniker is 64 characters
 class Identity {
     constructor(options = {}) {
+        this.kind = 'IDENTITY';
         // very like we are trying to create a 'sct' parent, but null might be passed as value, so we need to check for undefined
         this.parent = options.parent || (options.parent === undefined ? 'sct' : null); // default parent is 'sct'
         this.moniker = this.setMoniker(options.moniker) || '';
@@ -125,6 +126,7 @@ class Identity {
 
     toJSON() {
         return {
+            kind: this.kind,
             parent: this.parent,
             moniker: this.moniker,
             members: this.members,
@@ -139,6 +141,9 @@ class Identity {
 
         const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['IDENTITY'], 'uint8array');
 
+        const kindUint8Array = uint8array.fromString(this.kind);
+        const varIntKindLength = encodeVarInt(kindUint8Array.length);
+
         const parentUint8Array = uint8array.fromString(this.parent || '');
         const varIntParentLength = encodeVarInt(parentUint8Array.length);
 
@@ -152,6 +157,7 @@ class Identity {
         const varIntMembersLength = encodeVarInt(membersUint8Array.length);
 
         const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
+            + varIntKindLength.length + kindUint8Array.length 
             + varIntParentLength.length + parentUint8Array.length 
             + varIntMonikerLength.length + monikerUint8Array.length 
             + varIntRecordsLength.length + recordsUint8Array.length 
@@ -162,6 +168,8 @@ class Identity {
         if(options.excludeKindPrefix === false) {
             result.set(elementKindUint8Array, offset); offset += elementKindUint8Array.length;
         }
+        result.set(varIntKindLength, offset); offset += varIntKindLength.length;
+        result.set(kindUint8Array, offset); offset += kindUint8Array.length;
         result.set(varIntParentLength, offset); offset += varIntParentLength.length;
         result.set(parentUint8Array, offset); offset += parentUint8Array.length;
         result.set(varIntMonikerLength, offset); offset += varIntMonikerLength.length;
@@ -201,6 +209,12 @@ class Identity {
             // Reset offset if no valid NET_KINDS prefix found (backward compatibility)
             offset = 0;
         }
+
+        // Kind
+        const {value: kindLength, length: kindLengthLength} = decodeVarInt(array.slice(offset));
+        offset += kindLengthLength;
+        const kindArray = array.slice(offset, offset + kindLength);
+        offset += kindLength;
 
         // Parent
         const {value: parentLength, length: parentLengthLength} = decodeVarInt(array.slice(offset));

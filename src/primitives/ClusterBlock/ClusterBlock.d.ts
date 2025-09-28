@@ -41,7 +41,7 @@ export default class ClusterBlock {
     isVoting(): boolean;
     toDoc(signer: any): any;
     toSignableMessage(options?: { excludeAuthorization?: boolean }): SignableMessage;
-    toUInt8Array(options?: { excludeAuthorization?: boolean }): Uint8Array;
+    toUint8Array(options?: { excludeAuthorization?: boolean }): Uint8Array;
     addAuthorization(authorization: IClusterBlockAuthorization): void;
     sign(signer: any): Promise<any>;
     verifySignatures(): boolean;

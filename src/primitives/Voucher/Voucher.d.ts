@@ -27,7 +27,7 @@ export declare class Voucher {
     toBuffer(options?: { excludeAuthorization?: boolean }): Buffer;
     toHash(): string;
     toHex(): string;
-    toUInt8Array(): Uint8Array;
+    toUint8Array(): Uint8Array;
     toJSON(options?: { excludeAuthorization?: boolean }): any;
     addAuthorization(authorization: IVoucherAuthorization): void;
     verifySignature(): boolean;

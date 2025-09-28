@@ -8,10 +8,11 @@ import transformObjectNumbersToBigInt from '../../utils/transformObjectNumbersTo
 // @ts-ignore
 import { SignableMessage } from '@scintilla-network/keys';
 import signDoc from '../../utils/signDoc.js';
-import verifyDoc from '../../utils/verifyDoc.js';
+// import verifyDoc from '../../utils/verifyDoc.js';
 
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
-import { Authorization } from '../Authorization/Authorization.js';
+// import { Authorization } from '../Authorization/Authorization.js';
+import { Authorizations } from '../Authorizations/Authorizations.js';
 
 export class Voucher {
     constructor({
@@ -48,7 +49,7 @@ export class Voucher {
         //     signature: typeof auth.signature === 'string' ? uint8array.fromHex(auth.signature) : auth.signature,
         //     publicKey: typeof auth.publicKey === 'string' ? uint8array.fromHex(auth.publicKey) : auth.publicKey
         // }));
-        this.authorizations = authorizations.map(auth => new Authorization(auth));
+        this.authorizations = new Authorizations(authorizations);
         // this.authorizations = 
         
         this.hash = hash ?? this.computeHash();
@@ -59,8 +60,8 @@ export class Voucher {
     }
 
     toUint8Array(options = {}) {
-        if(options.excludeAuthorization === undefined) {
-            options.excludeAuthorization = false;
+        if(options.excludeAuthorizations === undefined) {
+            options.excludeAuthorizations = false;
         }
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -135,12 +136,12 @@ export class Voucher {
         const timelockStartAtUint8Array = varbigint.encodeVarBigInt(this.timelock.startAt, 'uint8array');
         const timelockEndAtUint8Array = varbigint.encodeVarBigInt(this.timelock.endAt, 'uint8array');
 
-        const authorizationsLengthUint8Array = varint.encodeVarInt(this.authorizations.length, 'uint8array');
-        const authorizationsUint8Array = [];
-        this.authorizations.forEach(authorization => {
-            const authorizationUint8Array = authorization.toUint8Array();
-            authorizationsUint8Array.push(...authorizationUint8Array);
-        });
+        // const authorizationsLengthUint8Array = varint.encodeVarInt(this.authorizations.length, 'uint8array');
+        const authorizationsUint8Array = this.authorizations.toUint8Array();
+        // this.authorizations.forEach(authorization => {
+        //     const authorizationUint8Array = authorization.toUint8Array();
+        //     authorizationsUint8Array.push(...authorizationUint8Array);
+        // });
 
         let totalLength = 
         (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
@@ -152,7 +153,7 @@ export class Voucher {
         + stackLengthUint8Array.length + stackUint8Array.length
         + dataLengthUint8Array.length + dataUint8Array.length
         + timelockStartAtUint8Array.length + timelockEndAtUint8Array.length //+ timelockCreatedAtUint8Array.length
-        + (options.excludeAuthorization ? 0 : authorizationsLengthUint8Array.length + authorizationsUint8Array.length);
+        + (options.excludeAuthorizations ? 0 : authorizationsUint8Array.length);
 
         const result = new Uint8Array(totalLength);
         let offset = 0;
@@ -190,8 +191,8 @@ export class Voucher {
         result.set(timelockEndAtUint8Array, offset); offset += timelockEndAtUint8Array.length;
         // result.set(timelockCreatedAtUint8Array, offset); offset += timelockCreatedAtUint8Array.length;
 
-        if(options.excludeAuthorization === false) {
-            result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
+        if(options.excludeAuthorizations === false) {
+            // result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
             result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
         }
         return result;
@@ -287,14 +288,17 @@ export class Voucher {
         // offset += createdAtBytes;
         const timelock = { startAt: BigInt(startAt), endAt: BigInt(endAt) };
 
-        const authorizations = [];
-        const {value: authorizationsAmount, length: authorizationsAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += authorizationsAmountBytes;
-        for (let i = 0; i < authorizationsAmount; i++) {
-            const authorization = Authorization.fromUint8Array(inputArray.subarray(offset));
-            offset += authorization.length;
-            authorizations.push(authorization);
-        }
+        // let authorizations = null;
+        //  const {value: authorizationsAmount, length: authorizationsAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        // offset += authorizationsAmountBytes;
+        const authBytes = inputArray.subarray(offset);
+        let authorizations = Authorizations.fromUint8Array(authBytes);
+        offset += authBytes.length;
+        // for (let i = 0; i < authorizationsAmount; i++) {
+        //     const authBytes = inputArray.subarray(offset);
+        //     authorizations.push(Authorizations.fromUint8Array(authBytes));
+        //     offset += authBytes.length;
+        // }
 
         const props = {
             kind,
@@ -311,144 +315,6 @@ export class Voucher {
         return new Voucher(props);
     }
 
-    /**
-     * @description Converts a Uint8Array to a Voucher
-     * @param {Uint8Array} uint8Array 
-     * @returns {Voucher}
-     * @deprecated Use fromUint8Array instead
-     */
-    static fromBuffer(array) {
-        throw new Error('fromBuffer is deprecated. Use fromUint8Array instead.');
-        let offset = 0;
-
-        // Version (1 byte)
-        const version = array[offset];
-        offset += 1;
-        
-        // Asset (3 bytes for 'sct')
-        const asset = new TextDecoder().decode(array.subarray(offset, offset + 3));
-        offset += 3;
-        
-        // Read inputs
-        const inputsLength = array[offset];
-        offset += 1;
-        
-        const inputs = [];
-        for (let i = 0; i < inputsLength; i++) {
-            // Read amount as BigInt from 8 bytes
-            const amountBytes = array.subarray(offset, offset + 8);
-            const amount = new DataView(amountBytes.buffer).getBigUint64(0, true);
-            offset += 8;
-            
-            // Hash
-            const hashLength = array[offset];
-            offset += 1;
-            const hash = new TextDecoder().decode(array.subarray(offset, offset + hashLength));
-            offset += hashLength;
-            
-            inputs.push({ amount, hash });
-        }
-        // Output amount (8 bytes)
-        const outputAmountBytes = array.subarray(offset, offset + 8);
-        const outputAmount = new DataView(outputAmountBytes.buffer).getBigUint64(0, true);
-        offset += 8;
-
-        // Output recipient length and recipient
-        const recipientLength = array[offset];
-        offset += 1;
-        const recipient = new TextDecoder().decode(array.subarray(offset, offset + recipientLength));
-        offset += recipientLength;
-
-        // Stack length and items
-        const stackLength = array[offset];
-        offset += 1;
-        const stack = [];
-        for (let i = 0; i < stackLength; i++) {
-            const itemLength = array[offset];
-            offset += 1;
-            const item = new TextDecoder().decode(array.subarray(offset, offset + itemLength));
-            offset += itemLength;
-            stack.push(item);
-        }
-
-        // Data length and data
-        const dataLength = array[offset];
-        offset += 1;
-        const data = JSON.parse(new TextDecoder().decode(array.subarray(offset, offset + dataLength)));
-        offset += dataLength;
-
-        // Timelock (24 bytes: 8 + 8 + 8)
-        const startAtBytes = array.subarray(offset, offset + 8);
-        const startAt = new DataView(startAtBytes.buffer).getBigUint64(0, true);
-        offset += 8;
-        const endAtBytes = array.subarray(offset, offset + 8);
-        const endAt = new DataView(endAtBytes.buffer).getBigUint64(0, true);
-        offset += 8;
-        const createdAtBytes = array.subarray(offset, offset + 8);
-        const createdAt = new DataView(createdAtBytes.buffer).getBigUint64(0, true);
-        offset += 8;
-
-        // Authorizations
-        const authorizations = [];
-        const authLength = array[offset];
-        offset += 1;
-
-        for (let i = 0; i < authLength; i++) {
-            const authType = array[offset];
-            let authorization = {};
-            offset += 1;
-
-            if(authType & 1){
-                const sigLength = array[offset];
-                offset += 1;
-                const signature = array.subarray(offset, offset + sigLength);
-                offset += sigLength;
-                authorization.signature = signature;
-            }
-            if(authType & 2){
-                const pubKeyLength = array[offset];
-                offset += 1;
-                const publicKey = array.subarray(offset, offset + pubKeyLength);
-                offset += pubKeyLength;
-                authorization.publicKey = publicKey;
-            }
-            if(authType & 4){
-                const monikerLength = array[offset];
-                offset += 1;
-                const moniker = new TextDecoder().decode(array.subarray(offset, offset + monikerLength));
-                offset += monikerLength;
-                authorization.moniker = moniker;
-            }
-            if(authType & 8){
-                const addressLength = array[offset];
-                offset += 1;
-                const address = new TextDecoder().decode(array.subarray(offset, offset + addressLength));
-                offset += addressLength;
-                authorization.address = address;
-            }
-            authorizations.push(authorization);
-        }
-        
-        return new Voucher({
-            version,
-            timestamp,
-            asset,
-            inputs,
-            output: {
-                amount: outputAmount,
-                recipient
-            },
-            stack,
-            data,
-            timelock: {
-                startAt,
-                endAt,
-                createdAt
-            },
-            authorizations
-        });
-    }
-
     static fromHex(hex) {
         // const buffer = Buffer.from(hex, 'hex');
         // return Voucher.fromBuffer(buffer);
@@ -461,135 +327,15 @@ export class Voucher {
         return uint8array.toHex(hash);
     }
 
-    
-    /**
-     * @deprecated Use toUint8Array instead
-     */
-    toBuffer({excludeAuthorization = false} = {}) {
-        throw new Error('toBuffer is deprecated. Use toUint8Array instead.');
-        const chunks = [];
-
-        // Version (1 byte)
-        const versionBuf = Buffer.alloc(1);
-        versionBuf.writeUInt8(this.version);
-        chunks.push(versionBuf);
-
-        // Timestamp (8 bytes)
-        const timestampBuf = Buffer.alloc(8);
-        timestampBuf.writeBigUInt64LE(BigInt(this.timestamp));
-        chunks.push(timestampBuf);
-
-        // Asset (3 bytes for 'sct')
-        const assetBuf = Buffer.from(this.asset);
-        chunks.push(assetBuf);
-
-        // Inputs array (1 byte for length)
-        chunks.push(Buffer.from([this.inputs.length]));
-        this.inputs.forEach(input => {
-            // Amount (8 bytes)
-            const amountBuf = Buffer.alloc(8);
-            amountBuf.writeBigUInt64LE(BigInt(input.amount));
-            chunks.push(amountBuf);
-            
-            // Hash length and hash
-            const hashBuf = Buffer.from(input.hash || '');
-            chunks.push(Buffer.from([hashBuf.length]));
-            chunks.push(hashBuf);
-        });
-        
-        // Output amount (8 bytes)
-        const amountBuf = Buffer.alloc(8);
-        amountBuf.writeBigUInt64LE(BigInt(this.output.amount));
-        chunks.push(amountBuf);
-        
-        // Output recipient length (varint byte)
-        chunks.push(varint.encodeVarInt(Buffer.from(this.output.recipient).length));
-        // Output recipient (recipientLength bytes)
-        chunks.push(Buffer.from(this.output.recipient));
-        
-        // Stack length (varint byte)
-        chunks.push(varint.encodeVarInt(this.stack.length));
-
-        // Stack (stackLength bytes)
-        this.stack.forEach(item => {
-            const itemBuf = Buffer.from(item);
-            chunks.push(Buffer.from([itemBuf.length]));
-            chunks.push(itemBuf);
-        });
-
-        const data = JSON.stringify(this.data);
-        // Data length (varint byte)
-        chunks.push(varint.encodeVarInt(data.length));
-        // Data (dataLength bytes)
-        chunks.push(Buffer.from(data));
-
-        // Timelock (24 bytes: 8 + 8 + 8)
-        const timelockBuf = Buffer.alloc(24);
-        timelockBuf.writeBigUInt64LE(BigInt(this.timelock.startAt), 0);
-        timelockBuf.writeBigUInt64LE(BigInt(this.timelock.endAt), 8);
-        timelockBuf.writeBigUInt64LE(BigInt(this.timelock.createdAt), 16);
-        chunks.push(timelockBuf);
-
-        if(!excludeAuthorization){
-            // Authorizations length (varint byte)
-            chunks.push(varint.encodeVarInt(this.authorizations.length));
-            // Authorizations (authorizationsLength bytes)
-            this.authorizations.forEach(auth => {
-                // Authorization type (1 byte for sig yes/no, 1 byte for pubkey yes/no, 1 byte for moniker yes/no, 1 byte for address yes/no)
-                let authType = 0;
-                if(auth.signature){
-                    authType |= 1;
-                }
-                if(auth.publicKey){
-                    authType |= 2;
-                }
-                if(auth.moniker){
-                    authType |= 4;
-                }
-                if(auth.address){
-                    authType |= 8;
-                }
-
-                chunks.push(Buffer.from([authType]));
-
-                if(authType & 1){
-                    // Signature (varint byte)
-                    chunks.push(varint.encodeVarInt(auth.signature.length));
-                    // Signature (signatureLength bytes)
-                    chunks.push(Buffer.from(auth.signature));
-                }
-                if(authType & 2){
-                    // Public key (varint byte)
-                    chunks.push(varint.encodeVarInt(auth.publicKey?.length ?? 0));
-                    // Public key (publicKeyLength bytes)
-                    chunks.push(Buffer.from(auth.publicKey ?? new Uint8Array()));
-                }
-                // May be moniker
-                if(authType & 4){
-                    chunks.push(varint.encodeVarInt(auth.moniker?.length ?? 0));
-                    chunks.push(Buffer.from(auth.moniker ?? ''));
-                }
-                // May be address
-                if(authType & 8){
-                    chunks.push(varint.encodeVarInt(auth.address?.length ?? 0));
-                    chunks.push(Buffer.from(auth.address ?? ''));
-                }
-            });
-        }
-        
-        return Buffer.concat(chunks);
-    }
-
     toHash() {
         return this.computeHash();
     }
 
     toHex() {
-        // return this.toBuffer().toString('hex');
         return uint8array.toHex(this.toUint8Array());
     }
 
-    toJSON({excludeAuthorization = false} = {}) {
+    toJSON({excludeAuthorizations = false} = {}) {
         const json = {
             version: this.version,
             timestamp: this.timestamp,
@@ -610,9 +356,9 @@ export class Voucher {
             },
         };
 
-        if (!excludeAuthorization) {
+        if (!excludeAuthorizations) {
             // Auth.signature and Auth.publicKey are Uint8Arrays, we need to convert them to strings
-            json.authorizations = this.authorizations.map(auth => ({
+            json.authorizations = this.authorizations.authorizations.map(auth => ({
                 ...auth,
                 signature: uint8array.toHex(auth.signature),
                 publicKey: auth.publicKey ? uint8array.toHex(auth.publicKey) : ''
@@ -626,15 +372,17 @@ export class Voucher {
         if(authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
         }
-        this.authorizations.push(authorization);
+        this.authorizations.addAuthorization(authorization);
     }
 
-    verifySignature() {
-        return verifyDoc(this);
+    verifyAuthorizations() {
+        // return verifyDoc(this);
+        return this.authorizations.verify(this);
     }
 
     toBase64() {
-        return this.toBuffer().toString('base64');
+        const uint8Array = this.toUint8Array();
+        return btoa(String.fromCharCode(...uint8Array));
     }
 
     toSignableMessage() {
@@ -646,11 +394,13 @@ export class Voucher {
     }
 
     async sign(signer) {
-        return signDoc(await this.toDoc(signer));
+        // return signDoc(await this.toDoc(signer));
+        this.authorizations.sign(this, signer);
+        return this;
     }
 
     getPublicKey() {
-        return this.authorizations?.[0]?.publicKey ? uint8ArrayToHex(this.authorizations[0].publicKey) : undefined;
+        return this.authorizations?.[0]?.publicKey ? uint8array.toHex(this.authorizations[0].publicKey) : undefined;
     }
 
     validate() {
@@ -658,7 +408,7 @@ export class Voucher {
             return {valid: false, error: 'Authorizations are required.'};
         }
 
-        const signedAuthorizations = this.authorizations.filter(auth => auth.signature);
+        const signedAuthorizations = this.authorizations.authorizations.filter(auth => auth.signature);
         if (signedAuthorizations.length === 0) {
             return {valid: false, error: 'At least one authorization with signature is required.'};
         }
@@ -668,8 +418,8 @@ export class Voucher {
             return {valid: false, error: 'At least one authorization with public key is required.'};
         }
 
-        if (!this.verifySignature()) {
-            return {valid: false, error: 'Invalid signature.'};
+        if (!this.verifyAuthorizations()) {
+            return {valid: false, error: 'Invalid authorization.'};
         }
 
         return {valid: true, error: ''};

@@ -41,7 +41,7 @@ const transaction = new Transaction({
 - `toBuffer()`: Converts the transaction to a buffer.
 - `fromBuffer()`: Converts a buffer to a transaction.
 - `toHex()`: Converts the transaction to a hex string.
-- `toUInt8Array()`: Converts the transaction to a uint8 array.
+- `toUint8Array()`: Converts the transaction to a uint8 array.
 - `toHash()`: Converts the transaction to a hash.
 - `toJSON()`: Converts the transaction to a JSON object.
 - `verifySignature()`: Verifies the signature of the transaction.

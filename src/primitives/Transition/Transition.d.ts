@@ -23,7 +23,7 @@ export declare class Transition {
     toBuffer(options?: { excludeAuthorization?: boolean }): Buffer;
     static fromBuffer(buffer: Buffer): Transition;
     toHex(options?: { excludeAuthorization?: boolean }): string;
-    toUInt8Array(options?: { excludeAuthorization?: boolean }): Uint8Array;
+    toUint8Array(options?: { excludeAuthorization?: boolean }): Uint8Array;
     toHash(encoding?: BufferEncoding, options?: { excludeAuthorization?: boolean }): string;
     toJSON(options?: { excludeAuthorization?: boolean }): object;
     addAuthorization(authorization: ITransactionAuthorization): void;

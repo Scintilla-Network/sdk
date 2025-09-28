@@ -8,6 +8,7 @@ import signDoc from "../../utils/signDoc.js";
 import makeDoc from "../../utils/makeDoc.js";
 import { uint8array, varint, json, varbigint } from '@scintilla-network/keys/utils';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
+import { Authorization } from '../Authorization/Authorization.js';
 
 class HashProof {
     constructor(options = {}) {
@@ -141,7 +142,8 @@ class HashProof {
     }
 
     async sign(signer) {
-        return signDoc(await this.toDoc(signer));
+        const auth = new Authorization();
+        return await auth.sign(this, signer);
     }
 
     isValid() {
@@ -190,5 +192,6 @@ class HashProof {
     }
 }
 
+export { HashProof };
 export default HashProof;
 

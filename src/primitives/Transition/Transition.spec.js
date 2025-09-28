@@ -149,7 +149,7 @@ describe('Transition', () => {
         expect(hex).toMatch(/^[0-9a-f]+$/);
     });
 
-    it('toUInt8Array method returns the correct Uint8Array', () => {
+    it('toUint8Array method returns the correct Uint8Array', () => {
         const transition = new Transition({
             cluster: 'finance',
             action: 'transfer',
@@ -158,7 +158,7 @@ describe('Transition', () => {
             timestamp: 1625097600000,
         });
 
-        const uint8Array = transition.toUInt8Array();
+        const uint8Array = transition.toUint8Array();
         expect(uint8Array).toBeInstanceOf(Uint8Array);
     });
 

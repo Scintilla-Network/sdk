@@ -18,7 +18,7 @@ export declare class RelayBlock {
     addSignature(signature: IRelayBlockSignature): void;
     toSignableMessage(options?: { excludeAuthorization?: boolean }): SignableMessage;
     verifySignature(): boolean;
-    toUInt8Array(options?: { excludeSignatures?: boolean }): Uint8Array;
+    toUint8Array(options?: { excludeSignatures?: boolean }): Uint8Array;
     addAuthorization(authorization: ITransactionAuthorization): void;
     sign(signer: any): Promise<any>;
     toBuffer(options?: { excludeSignatures?: boolean }): Buffer;
