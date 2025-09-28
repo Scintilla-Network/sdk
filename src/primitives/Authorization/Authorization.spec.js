@@ -22,8 +22,6 @@ describe('Authorization', () => {
         authorization.sign(element, signer);
         authorization.verify(element);
 
-        console.log(authorization);
-
     });
 });
 

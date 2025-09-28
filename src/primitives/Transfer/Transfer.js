@@ -1,15 +1,10 @@
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
+import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from '@scintilla-network/keys';
 import { varint, uint8array, json, varbigint } from '@scintilla-network/keys/utils';
-import makeDoc from "../../utils/makeDoc.js";
-import signDoc from "../../utils/signDoc.js";
-import verifyDoc from "../../utils/verifyDoc.js";
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
-// import uInt8ArrayToHex from "../../utils/uInt8ArrayToHex.js";
+import makeDoc from '../../utils/makeDoc.js';
 import { StateActionData } from '../StateActionData/StateActionData.js';
 import { Authorizations } from '../Authorizations/Authorizations.js';
-import { Authorization } from '../Authorization/Authorization.js';
 
 export class Transfer {
     constructor(props = {}) {
@@ -97,27 +92,13 @@ export class Transfer {
         result.set(feesUint8Array, offset); offset += feesUint8Array.length;
         result.set(timelockStartTickUint8Array, offset); offset += timelockStartTickUint8Array.length;
         result.set(timelockEndTickUint8Array, offset); offset += timelockEndTickUint8Array.length;
-        console.log({
-            result
-        });
         if(options.excludeAuthorizations === false) {
             result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
         }
-        console.log({
-            options
-        });
-        console.log(`| - Transfer.toUint8Array(): END [Length: ${result.length}]`);
-        console.log({
-            result,
-        })
         return result;
     }
 
     static fromUint8Array(inputArray) {
-        console.log(`| - Transfer.fromUint8Array() : START [Length: ${inputArray.length}]`);
-        console.log({
-            inputArray: inputArray,
-        });
         const transferProps = {};
 
         let offset = 0;
@@ -186,7 +167,6 @@ export class Transfer {
         // offset += authorizationsLengthBytes;
         transferProps.authorizations = Authorizations.fromUint8Array(inputArray.subarray(offset));
         offset += transferProps.authorizations.toUint8Array().length;
-        console.log(`| - Transfer.fromUint8Array(): END [Length: ${inputArray.length}]`);
 
         return new Transfer(transferProps);
     }

@@ -272,44 +272,6 @@ class StateActionData {
             
         }
         return new StateActionData(data);
-        
-
-
-        // 1) Data total length bytes (varint)
-        // 2) Data items amount (varint)
-        // 3) Data items (each item is a Uint8Array starting with the kind part (varint))
-        // 4) Data item via parseItem(item)
-        // 5) Return new StateActionData(data)
-        // const data = [];
-        // let offset = 0;
-
-        // const dataItemsAmountBytes = varint.decodeVarInt(input.subarray(offset));
-        // offset += dataItemsAmountBytes.length;
-
-        // for(let i = 0; i < dataItemsAmountBytes.value; i++) {
-        //     // const itemLengthBytes = varint.decodeVarInt(input.subarray(offset));
-        //     // offset += itemLengthBytes.length;
-        //     // console.log('itemLengthBytes', itemLengthBytes);
-        //     // console.log('itemLengthBytes', itemLengthBytes.value);
-        //     // console.log('offset', offset);
-        //     // console.log('input.subarray(offset, offset + itemLengthBytes.value)', input.slice(offset))
-
-        //     const kind = varint.decodeVarInt(input.slice(offset));
-        //     // offset += kind.length;
-        //     const kindString = NET_KINDS_ARRAY[kind.value];
-        //     if(kindString === 'STATEACTIONOBJECTITEM') {
-        //         const item = StateActionObjectItem.fromUint8Array(input.slice(offset));
-        //         data.push(item);
-        //         offset += item.getLength();
-        //     } else if(kindString === 'STATEACTIONITEM') {
-        //         const item = StateActionItem.fromUint8Array(input.slice(offset));
-        //         data.push(item);
-        //         offset += item.getLength();
-        //     } else {
-        //         throw new Error(`Unsupported kind: ${kindString}`);
-        //     }
-        // }
-        // return new StateActionData([data]);
     }
 
     getLength() {

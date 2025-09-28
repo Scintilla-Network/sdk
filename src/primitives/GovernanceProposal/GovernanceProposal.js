@@ -367,7 +367,6 @@ class GovernanceProposal {
 
     isValid() {
         const {valid, error} = this.validate();
-        console.log('error', error);
         return valid;
     }
 
