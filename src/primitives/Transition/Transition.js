@@ -263,8 +263,7 @@ export class Transition {
     }
 
     verifyAuthorizations() {
-    //    return verifyDoc(this);
-        return this.authorizations.verify(this);
+        return this.authorizations.every(auth => auth.verify(this));
     }
     
     toBase64() {
