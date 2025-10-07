@@ -1,6 +1,6 @@
 {
   "name": "@scintilla-network/sdk",
-  "version": "1.0.2",
+  "version": "1.2.0",
   "description": "A TypeScript SDK for Node.js and Web Browsers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
