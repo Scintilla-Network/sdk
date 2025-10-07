@@ -17,6 +17,68 @@ class Identity {
         options.members?.forEach(member => this.setMember(member));
     }
 
+    static fromJSON(json) {
+        return new Identity({
+            parent: json.parent,
+            moniker: json.moniker,
+            records: json.records,
+            members: json.members
+        });
+    }
+
+    static fromHex(hex) {
+        const uint8Array = uint8array.fromHex(hex);
+        return Identity.fromUint8Array(uint8Array);
+    }
+
+    static fromUint8Array(array) {
+        let offset = 0;
+
+        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(array.slice(offset));
+        if(elementKind === NET_KINDS['IDENTITY']) {
+            offset += elementKindLength;
+        } else {
+            // Reset offset if no valid NET_KINDS prefix found (backward compatibility)
+            offset = 0;
+        }
+
+        // Kind
+        const {value: kindLength, length: kindLengthLength} = decodeVarInt(array.slice(offset));
+        offset += kindLengthLength;
+        const kindArray = array.slice(offset, offset + kindLength);
+        offset += kindLength;
+
+        // Parent
+        const {value: parentLength, length: parentLengthLength} = decodeVarInt(array.slice(offset));
+        offset += parentLengthLength;
+        const parentArray = array.slice(offset, offset + parentLength);
+        offset += parentLength;
+
+        // Moniker
+        const {value: monikerLength, length: monikerLengthLength} = decodeVarInt(array.slice(offset));
+        offset += monikerLengthLength;
+        const monikerArray = array.slice(offset, offset + monikerLength);
+        offset += monikerLength;
+
+        // Records
+        const {value: recordsLength, length: recordsLengthLength} = decodeVarInt(array.slice(offset));
+        offset += recordsLengthLength;
+        const recordsArray = array.slice(offset, offset + recordsLength);
+        offset += recordsLength;
+
+        // Members
+        const {value: membersLength, length: membersLengthLength} = decodeVarInt(array.slice(offset));
+        offset += membersLengthLength;
+        const membersArray = array.slice(offset, offset + membersLength);
+
+        return new Identity({
+            parent: uint8array.toString(parentArray),
+            moniker: uint8array.toString(monikerArray),
+            records: json.parse(uint8array.toString(recordsArray)),
+            members: json.parse(uint8array.toString(membersArray))
+        });
+    }
+
     setMoniker(moniker) {
         const monikerRegex = /^[a-z0-9_-]+$/;
         // If moniker is alphanumeric, hyphens, or underscores and not exceed 64 characters
@@ -193,59 +255,6 @@ class Identity {
         return sha256(this.toUint8Array());
     }
 
-    static fromHex(hex) {
-        const uint8Array = uint8array.fromHex(hex);
-        return Identity.fromUint8Array(uint8Array);
-    }
-
-    static fromUint8Array(array) {
-        let offset = 0;
-
-        // Check for NET_KINDS prefix
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(array.slice(offset));
-        if(elementKind === NET_KINDS['IDENTITY']) {
-            offset += elementKindLength;
-        } else {
-            // Reset offset if no valid NET_KINDS prefix found (backward compatibility)
-            offset = 0;
-        }
-
-        // Kind
-        const {value: kindLength, length: kindLengthLength} = decodeVarInt(array.slice(offset));
-        offset += kindLengthLength;
-        const kindArray = array.slice(offset, offset + kindLength);
-        offset += kindLength;
-
-        // Parent
-        const {value: parentLength, length: parentLengthLength} = decodeVarInt(array.slice(offset));
-        offset += parentLengthLength;
-        const parentArray = array.slice(offset, offset + parentLength);
-        offset += parentLength;
-
-        // Moniker
-        const {value: monikerLength, length: monikerLengthLength} = decodeVarInt(array.slice(offset));
-        offset += monikerLengthLength;
-        const monikerArray = array.slice(offset, offset + monikerLength);
-        offset += monikerLength;
-
-        // Records
-        const {value: recordsLength, length: recordsLengthLength} = decodeVarInt(array.slice(offset));
-        offset += recordsLengthLength;
-        const recordsArray = array.slice(offset, offset + recordsLength);
-        offset += recordsLength;
-
-        // Members
-        const {value: membersLength, length: membersLengthLength} = decodeVarInt(array.slice(offset));
-        offset += membersLengthLength;
-        const membersArray = array.slice(offset, offset + membersLength);
-
-        return new Identity({
-            parent: uint8array.toString(parentArray),
-            moniker: uint8array.toString(monikerArray),
-            records: json.parse(uint8array.toString(recordsArray)),
-            members: json.parse(uint8array.toString(membersArray))
-        });
-    }
 }
 
 export { Identity };

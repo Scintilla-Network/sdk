@@ -14,62 +14,11 @@ class HashProof {
     constructor(options = {}) {
         this.kind = 'HASHPROOF';
         this.version = 1;
+        this.cluster = options.cluster ?? '';
         this.header = new HashProofHeader(options?.header);
         this.payload = new HashProofPayload(options.payload ?? {data: []});
     }
 
-    async consider(element) {
-        if (!element || !element.type) {
-            console.error('HashProof tried to consider an undefined or invalid element.');
-            return;
-        }
-        this.payload.consider(element);
-
-        this.header.merkleRoot = HashProof.generateMerkleRoot(this.payload.data, 'hex').hash;
-    }
-
-    toUint8Array(options = {}) {
-        if(options.excludeKindPrefix === undefined) {
-            options.excludeKindPrefix = false;
-        }
-
-        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['HASHPROOF'], 'uint8array');
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
-
-        const headerUint8Array = this.header.toUint8Array();
-        const headerLengthUint8Array = varint.encodeVarInt(headerUint8Array.length, 'uint8array');
-        const payloadUint8Array = this.payload.toUint8Array();
-        const payloadLengthUint8Array = varint.encodeVarInt(payloadUint8Array.length, 'uint8array');
-
-        const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length)
-            + versionUint8Array.length 
-            + headerLengthUint8Array.length + headerUint8Array.length 
-            + payloadLengthUint8Array.length + payloadUint8Array.length;
-
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-        
-        if(options.excludeKindPrefix === false) {
-            result.set(elementKindUint8Array, offset); offset += elementKindUint8Array.length;
-        }
-        result.set(versionUint8Array, offset); offset += versionUint8Array.length;
-        result.set(headerLengthUint8Array, offset); offset += headerLengthUint8Array.length;
-        result.set(headerUint8Array, offset); offset += headerUint8Array.length;
-        result.set(payloadLengthUint8Array, offset); offset += payloadLengthUint8Array.length;
-        result.set(payloadUint8Array, offset); offset += payloadUint8Array.length;
-        
-        return result;
-    }
-
-    toHex() {
-        return uint8array.toHex(this.toUint8Array());
-    }
-
-    toHash(encoding = 'hex') {
-        const array = this.toUint8Array();
-        const hashUint8Array = sha256(array);
-        return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
-    }
 
     static fromUint8Array(inputArray) {
         const hashProofProps = {};
@@ -78,13 +27,19 @@ class HashProof {
         const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += elementKindLength;
         if(elementKind !== NET_KINDS['HASHPROOF']) {
-            throw new Error('Invalid element kind');
+            throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['HASHPROOF']}(HASHPROOF)`);
         }
         hashProofProps.kind = NET_KINDS_ARRAY[elementKind];
 
         const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
         hashProofProps.version = version;
         offset += versionLength;
+
+         // Cluster
+         const {value: clusterLength, length: clusterLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+         offset += clusterLengthBytes;
+         const cluster = uint8array.toString(inputArray.subarray(offset, offset + clusterLength));
+         offset += clusterLength;
 
         // Header
         const {value: headerLength, length: headerLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
@@ -100,7 +55,7 @@ class HashProof {
         const payload = HashProofPayload.fromUint8Array(payloadUint8Array);
         offset += payloadLength;
 
-        return new HashProof({header: header.toJSON(), payload: payload.toJSON()});
+        return new HashProof({cluster, header: header.toJSON(), payload: payload.toJSON()});
     }
 
     static fromHex(hex) {
@@ -121,9 +76,69 @@ class HashProof {
 
         return {hash: uint8array.toHex(new Uint8Array(root)), proofs};
     }
+    
+    async consider(element) {
+        if (!element || !element.type) {
+            console.error('HashProof tried to consider an undefined or invalid element.');
+            return;
+        }
+        this.payload.consider(element);
+
+        this.header.merkleRoot = HashProof.generateMerkleRoot(this.payload.data, 'hex').hash;
+    }
+
+    toUint8Array(options = {}) {
+        if(options.excludeKindPrefix === undefined) {
+            options.excludeKindPrefix = false;
+        }
+
+        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['HASHPROOF'], 'uint8array');
+        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
+
+        const clusterUint8Array = uint8array.fromString(this.cluster);
+        const clusterLengthUint8Array = varint.encodeVarInt(clusterUint8Array.length, 'uint8array');
+
+        const headerUint8Array = this.header.toUint8Array();
+        const headerLengthUint8Array = varint.encodeVarInt(headerUint8Array.length, 'uint8array');
+        const payloadUint8Array = this.payload.toUint8Array();
+        const payloadLengthUint8Array = varint.encodeVarInt(payloadUint8Array.length, 'uint8array');
+
+        const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length)
+            + versionUint8Array.length 
+            + clusterLengthUint8Array.length + clusterUint8Array.length 
+            + headerLengthUint8Array.length + headerUint8Array.length 
+            + payloadLengthUint8Array.length + payloadUint8Array.length;
+
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+        
+        if(options.excludeKindPrefix === false) {
+            result.set(elementKindUint8Array, offset); offset += elementKindUint8Array.length;
+        }
+        result.set(versionUint8Array, offset); offset += versionUint8Array.length;
+        result.set(clusterLengthUint8Array, offset); offset += clusterLengthUint8Array.length;
+        result.set(clusterUint8Array, offset); offset += clusterUint8Array.length;
+        result.set(headerLengthUint8Array, offset); offset += headerLengthUint8Array.length;
+        result.set(headerUint8Array, offset); offset += headerUint8Array.length;
+        result.set(payloadLengthUint8Array, offset); offset += payloadLengthUint8Array.length;
+        result.set(payloadUint8Array, offset); offset += payloadUint8Array.length;
+        
+        return result;
+    }
+
+    toHex() {
+        return uint8array.toHex(this.toUint8Array());
+    }
+
+    toHash(encoding = 'hex') {
+        const array = this.toUint8Array();
+        const hashUint8Array = sha256(array);
+        return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
+    }
 
     toJSON() {
         return {
+            cluster: this.cluster,
             header: this.header.toJSON(),
             payload: this.payload.toJSON(),
         };
@@ -154,6 +169,9 @@ class HashProof {
         }
 
         // Proposer validation - required for valid proofs
+        if (!this.cluster) {
+            return { valid: false, error: 'Cluster is required for valid proof' };
+        }
         if (!this.header.proposer) {
             return { valid: false, error: 'Proposer is required for valid proof' };
         }

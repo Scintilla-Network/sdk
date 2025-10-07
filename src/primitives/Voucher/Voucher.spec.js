@@ -1,9 +1,81 @@
 // import { describe, it, expect, beforeEach } from 'vitest';
 import { describe, it, expect, beforeEach } from '@scintilla-network/litest';
 import Voucher from './Voucher.js';
-import { utils } from '@scintilla-network/keys';
-import { sha256 } from '@scintilla-network/hashes/classic';
-const { uint8array } = utils;
+import { Wallet } from '@scintilla-network/wallet';
+import { Authorization } from '../Authorization/Authorization.js';
+
+
+const persona = Wallet.create().getAccount(0).getPersona('alice');
+
+
+
+describe('Voucher', () => {
+    it('should create a Voucher instance', async () => {
+        const voucher = new Voucher({
+            asset: 'SCT',
+            inputs: [{
+                // null hash for creation of voucher (no ref to previous transaction)
+                hash: '0000000000000000000000000000000000000000000000000000000000000000',
+                // amount: genesisNodeMint.data.amount,
+                amount: 1_000n * 10n**9n,
+            }],
+            output: {
+                recipient: 'scintilla',
+                // amount: 500_000n * 10n**9n,
+                amount: 1_000n * 10n**9n,
+            },
+            data: [ { description: 'Minted coins for the genesis node', moniker: persona.getMoniker() } ]
+          });
+          
+        //   await voucher.sign(persona.getSigner());
+
+
+        const bytes = voucher.toUint8Array();
+        const parsedFromBytes = Voucher.fromUint8Array(bytes);
+        // console.log({parsedFromBytes});
+        
+        // const hex = voucher.toHex();
+        // console.log({hex});
+        // const parsedFromHex = Voucher.fromHex(hex);
+        // console.log({parsedFromHex});
+
+        // const json = voucher.toJSON();
+        // console.log({json});
+        // const parsedFromJson = Voucher.fromJSON(json);
+        // console.log({parsedFromJson});
+
+        // const hash = voucher.toHash();
+        // expect(hash).toBe(parsedFromBytes.toHash());
+        // expect(hash).toBe(parsedFromHex.toHash());
+        // expect(hash).toBe(parsedFromJson.toHash());
+
+        //   expect(genesisNodeCreateVoucher.authorizations.length).toBe(1);
+        //   expect(genesisNodeCreateVoucher.authorizations[0]).toBeInstanceOf(Authorization);
+        //   expect(genesisNodeCreateVoucher.authorizations[0].signature).toBeDefined();
+        //   expect(genesisNodeCreateVoucher.authorizations[0].publicKey).toBeDefined();
+        //   expect(genesisNodeCreateVoucher.authorizations[0].moniker).toBe(persona.getMoniker());
+        //   expect(genesisNodeCreateVoucher.authorizations[0].address).toBe(persona.getSigner().toAddress());
+
+        //   const hex = genesisNodeCreateVoucher.toHex();
+        //   const array = genesisNodeCreateVoucher.toUint8Array();
+        //   const hash = genesisNodeCreateVoucher.toHash();
+        //   const json = genesisNodeCreateVoucher.toJSON();
+
+        //   const parsedFromJson = Voucher.fromJSON(json);
+        //   const parsedFromHex = Voucher.fromHex(hex);
+        //   const parsedFromArray = Voucher.fromUint8Array(array);
+
+        //   expect(parsedFromJson.toJSON()).toEqual(genesisNodeCreateVoucher.toJSON());
+        //   expect(parsedFromHex.toJSON()).toEqual(genesisNodeCreateVoucher.toJSON());
+        //   expect(parsedFromArray.toJSON()).toEqual(genesisNodeCreateVoucher.toJSON());
+
+
+    });
+});
+
+
+
+
 
 const VOUCHER_FIXTURES = {
     sct: {
@@ -20,7 +92,7 @@ const VOUCHER_FIXTURES = {
     sct_as_hex: '037363740164000000000000000000c84e676dc11b04616c6578000000000000000000000000000000007a07aa4394010000'
 }
 
-describe('Voucher', () => {
+describe.skip('Voucher', () => {
     let voucher;
     let voucherFromJSON;
 

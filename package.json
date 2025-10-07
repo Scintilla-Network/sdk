@@ -19,7 +19,6 @@
     "lint": "eslint src --ext .ts",
     "test:asset": "litest src/primitives/Asset/Asset.spec.js",
     "test:authorization": "litest src/primitives/Authorization/Authorization.spec.js",
-    "test:authorizations": "litest src/primitives/Authorizations/Authorizations.spec.js",
     "test:clusterblock": "litest src/primitives/ClusterBlock/ClusterBlock.spec.js",
     "test:drivedata": "litest src/primitives/DriveData/DriveData.spec.js",
     "test:governanceproposal": "litest src/primitives/GovernanceProposal/GovernanceProposal.spec.js",
@@ -28,12 +27,30 @@
     "test:transaction": "litest src/primitives/Transaction/Transaction.spec.js",
     "test:transition": "litest src/primitives/Transition/Transition.spec.js",
     "test:transfer": "litest src/primitives/Transfer/Transfer.spec.js",
+    "test:quorumdecision": "litest src/primitives/QuorumDecision/QuorumDecision.spec.js",
+    "test:quorumdecisionvote": "litest src/primitives/QuorumDecisionVote/QuorumDecisionVote.spec.js",
     "test:voucher": "litest src/primitives/Voucher/Voucher.spec.js",
     "test:identity": "litest src/primitives/Identity/Identity.spec.js",
     "test:netmessage": "litest src/primitives/messages/NetMessage/NetMessage.spec.js",
     "test:relayblock": "litest src/primitives/RelayBlock/RelayBlock.spec.js",
     "test:stateactiondata": "litest src/primitives/StateActionData/StateActionData.spec.js",
-    "test:instruction": "litest src/primitives/Instruction/Instruction.spec.js"
+    "test:instruction": "litest src/primitives/Instruction/Instruction.spec.js",
+    "test:serialize": "litest src/utils/serializeJSONToUint8Array.spec.js && litest src/utils/deserializeJSONFromUint8Array.spec.js",
+    "test:fromString": "litest src/utils/serialize/fromString.spec.js",
+    "test:fromVarInt": "litest src/utils/serialize/fromVarInt.spec.js",
+    "test:fromVarBigInt": "litest src/utils/serialize/fromVarBigInt.spec.js",
+    "test:fromBoolean": "litest src/utils/serialize/fromBoolean.spec.js",
+    "test:fromArray": "litest src/utils/serialize/fromArray.spec.js",
+    "test:fromObject": "litest src/utils/serialize/fromObject.spec.js",
+    "test:toString": "litest src/utils/deserialize/toString.spec.js",
+    "test:toVarInt": "litest src/utils/deserialize/toVarInt.spec.js",
+    "test:toVarBigInt": "litest src/utils/deserialize/toVarBigInt.spec.js",
+    "test:toBoolean": "litest src/utils/deserialize/toBoolean.spec.js",
+    "test:toArray": "litest src/utils/deserialize/toArray.spec.js",
+    "test:toObject": "litest src/utils/deserialize/toObject.spec.js",
+    "test:roundtrip": "litest src/utils/roundtrip.spec.js",
+    "test:all-serialize": "npm run test:fromString && npm run test:fromVarInt && npm run test:fromVarBigInt && npm run test:fromBoolean && npm run test:fromArray && npm run test:fromObject",
+    "test:all-deserialize": "npm run test:toString && npm run test:toVarInt && npm run test:toVarBigInt && npm run test:toBoolean && npm run test:toArray && npm run test:toObject"
   },
   "license": "MIT",
   "bugs": {
@@ -70,12 +87,13 @@
   ],
   "author": "Scintilla Labs",
   "devDependencies": {
-    "@scintilla-network/litest": "1.3.1"
+    "@scintilla-network/litest": "1.3.1",
+    "@scintilla-network/wallet": "^1.0.0-beta.3"
   },
   "dependencies": {
     "@scintilla-network/hashes": "1.3.1",
-    "@scintilla-network/keys": "1.0.0-beta.24",
+    "@scintilla-network/keys": "1.0.0-beta.26",
     "@truestamp/tree": "2.1.0",
-    "hermodlog": "1.5.2"
+    "hermodlog": "1.6.0"
   }
-} 
+}

@@ -84,6 +84,6 @@ describe('GovernanceProposal', () => {
         expect(parsedProposal.toHex()).toEqual(proposal.toHex());
         expect(parsedProposal.toJSON()).toEqual(proposal.toJSON());
         expect(parsedProposal.toUint8Array()).toEqual(proposal.toUint8Array());
-        expect(parsedProposal.toHash()).toEqual('9cb362d78ef22dccc0246c727b54ddf4d1452a8331dc8eacc56645d8a90d14e8');
+        expect(parsedProposal.toHash()).toEqual('3eaebbdc06109816a0b0e70a823bd8c3a5ce550fb55ebb8ad5b0f2a49e8f8c83');
     });
 });

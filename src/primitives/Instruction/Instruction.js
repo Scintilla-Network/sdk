@@ -1,5 +1,5 @@
 import { sha256 } from "@scintilla-network/hashes/classic";
-import { uint8array, varint, varbigint } from '@scintilla-network/keys/utils';
+import { uint8array, varint, varbigint, json } from '@scintilla-network/keys/utils';
 
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
@@ -7,6 +7,7 @@ const KEY_TYPES = {
     STRING: 0,
     VARBIGINT: 1,
     VARINT: 2,
+    OBJECT: 3,
 }
 
 
@@ -51,6 +52,10 @@ function deserialize(data) {
             case KEY_TYPES.VARINT:
                 value = varint.decodeVarInt(fieldValueBytes);
                 value = value.value;
+                break;
+            case KEY_TYPES.OBJECT:
+                value = json.parse(uint8array.toString(fieldValueBytes));
+
                 break;
             default:
                 throw new Error('Unsupported field type');
@@ -99,8 +104,13 @@ function serialize(data) {
                 fieldValueBytes = varint.encodeVarInt(fieldValue, 'uint8array');
                 fieldValueTypeBytes = varint.encodeVarInt(KEY_TYPES.VARINT, 'uint8array');
                 break;
+            case 'object':
+                fieldValueBytes = uint8array.fromString(json.stringify(fieldValue));
+                fieldValueTypeBytes = varint.encodeVarInt(KEY_TYPES.OBJECT, 'uint8array');
+
+                break;
             default:
-                throw new Error(`Unsupported field type ${typeof fieldValue} - ${JSON.stringify(fieldValue)}`);
+                throw new Error(`Unsupported field type ${typeof fieldValue} - ${json.stringify(fieldValue)}`);
         }
 
         const fieldValueLengthBytes = varint.encodeVarInt(fieldValueBytes.length, 'uint8array');
@@ -134,33 +144,6 @@ class Instruction {
         this.data = options.data || {};
     }
 
-    toJSON() {
-        return {
-            kind: this.kind,
-            data: this.data,
-        };
-    }
-
-    toUint8Array() {
-        const kindUint8ArrayBytes = varint.encodeVarInt(NET_KINDS['INSTRUCTION'], 'uint8array');
-
-        const dataUint8Array = serialize(this.data);
-        const totalLengthBytes = varint.encodeVarInt(dataUint8Array.length, 'uint8array');
-
-
-        const result = new Uint8Array(kindUint8ArrayBytes.length + totalLengthBytes.length + dataUint8Array.length);
-        result.set(kindUint8ArrayBytes, 0);
-        result.set(totalLengthBytes, kindUint8ArrayBytes.length);
-        result.set(dataUint8Array, kindUint8ArrayBytes.length + totalLengthBytes.length);
-        return result;
-    }
-
-    toHash(encoding = 'hex') {  
-        const uint8Array = this.toUint8Array();
-        const hash = sha256(uint8Array);
-        return encoding === 'hex' ? uint8array.toHex(hash) : uint8array.toString(hash);
-    }
-
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return this.fromUint8Array(uint8Array);
@@ -191,6 +174,37 @@ class Instruction {
         });
     }
 
+    static fromJSON(json) {
+        return new Instruction(json);
+    }
+
+    toJSON() {
+        return {
+            kind: this.kind,
+            data: this.data,
+        };
+    }
+
+    toUint8Array({ excludeKindPrefix = false } = {}) {
+        const kindUint8ArrayBytes = excludeKindPrefix ? new Uint8Array(0) : varint.encodeVarInt(NET_KINDS['INSTRUCTION'], 'uint8array');
+
+        const dataUint8Array = serialize(this.data);
+        const totalLengthBytes = varint.encodeVarInt(dataUint8Array.length, 'uint8array');
+
+
+        const result = new Uint8Array(kindUint8ArrayBytes.length + totalLengthBytes.length + dataUint8Array.length);
+        result.set(kindUint8ArrayBytes, 0);
+        result.set(totalLengthBytes, kindUint8ArrayBytes.length);
+        result.set(dataUint8Array, kindUint8ArrayBytes.length + totalLengthBytes.length);
+        return result;
+    }
+
+    toHash(encoding = 'hex') {  
+        const uint8Array = this.toUint8Array();
+        const hash = sha256(uint8Array);
+        return encoding === 'hex' ? uint8array.toHex(hash) : uint8array.toString(hash);
+    }
+
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
@@ -200,9 +214,6 @@ class Instruction {
         return this.toHex();
     }
 
-    static fromJSON(json) {
-        return new Instruction(json);
-    }
 }
 
 export { Instruction };

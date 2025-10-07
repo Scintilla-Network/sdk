@@ -1,7 +1,7 @@
 export const NET_KINDS = {
     UNKNOWN: 0,
-    PEER_INFO: 1,
-    REQUEST: 2,
+    PEERINFO: 1,
+    REQUEST : 2,
     RESPONSE: 3,
     ACKHANDSHAKE: 4,
     EPOCHBLOCK: 5,
@@ -21,6 +21,9 @@ export const NET_KINDS = {
     GOVERNANCEPROPOSAL: 19,
     GOVERNANCEVOTE: 20,
     INSTRUCTION: 21,
+    RAW: 22,
+    PACKEDOBJECT: 23,
+    PACKEDARRAY: 24,
 };
 
 export const NET_KINDS_ARRAY = Object.keys(NET_KINDS);

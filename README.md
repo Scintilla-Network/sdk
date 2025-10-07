@@ -25,21 +25,26 @@ The SDK includes a variety of primitives, each tailored for specific use cases w
 - [BigDecimal](./src/primitives/BigDecimal/BigDecimal.md) - A big decimal is a decimal number that is used to represent a large number.
 
 <!-- - [DAO](./src/primitives/dao/DAO.md) - A DAO is a decentralized autonomous organization. -->
-- [ModuleBlock](./src/primitives/moduleBlock/ModuleBlock.md) - A module block is a block representation in a specific module.
-- [Transaction](./src/primitives/Transaction/Transaction.md) - A transaction is a message that is used to perform a specific action.
-- [Messages](./src/primitives/messages/Messages.md) - Messages are the fundamental units of communication in the Scintilla network.
 - [ClusterBlock](./src/primitives/ClusterBlock/ClusterBlock.md) - A cluster block is a block representation in a specific cluster.
 - [DriveData](./src/primitives/DriveData/DriveData.md) - A drive data is a data that is stored in drive.
+
 - [GovernanceProposal](./src/primitives/GovernanceProposal/GovernanceProposal.md) - A governance proposal is a proposal to the DAO.
 - [GovernanceVote](./src/primitives/GovernanceVote/GovernanceVote.md) - A governance vote is a vote on a governance proposal.
+
 - [HashProof](./src/primitives/HashProof/HashProof.md) - A hash proof is a POW block in a cluster
 - [Identity](./src/primitives/Identity/Identity.md) - An identity is a unique entity with a moniker, address, and associated records.
 - [Instruction](./src/primitives/Instruction/Instruction.md) - An instruction is a message that is used to perform a specific action.
+
+- [Messages](./src/primitives/messages/Messages.md) - Messages are the fundamental units of communication in the Scintilla network.
+
+- [QuorumDecision](./src/primitives/QuorumDecision/QuorumDecision.md) - A quorum decision is a decision made by a quorum.
+- [QuorumDecisionVote](./src/primitives/QuorumDecisionVote/QuorumDecisionVote.md) - A quorum decision vote is a vote on a quorum decision.
+
 - [RelayBlock](./src/primitives/RelayBlock/RelayBlock.md) - A relay block is a specific block that happen between relayers.
-- [StateActionData](./src/primitives/StateActionData/StateActionData.md) - A state action data is a message that is used to store a list of state actions.
+- [Transaction](./src/primitives/Transaction/Transaction.md) - A transaction is a message that is used to perform a specific action.
 - [Transfer](./src/primitives/Transfer/Transfer.md) - A transfer is a message that is used to transfer assets.
-- [Transition](./src/primitives/Transition/Transition.md) - A transition is a message that is used to transition the state of the system.
 - [Voucher](./src/primitives/Voucher/Voucher.md) - A digital voucher for transferring assets.
+- [Transition](./src/primitives/Transition/Transition.md) - A transition is a message that is used to transition the state of the system.
 
 #### Misc Primitives
 
@@ -57,6 +62,19 @@ The SDK also includes primitives for message handling:
 For technical operations, the SDK provides utility functions and data structures:
 - [Hash (sha256)](./src/utilities/hash/README.md)
 - [VarInt Encoding/Decoding](./src/utilities/varInt/README.md)
+- [serialize](./src/utils/serialize/index.md)
+    - [fromString](./src/utils/serialize/fromString.md) - Serialize a string to a byte array.
+    - [fromVarInt](./src/utils/serialize/fromVarInt.md) - Serialize a number to a byte array.
+    - [fromVarBigInt](./src/utils/serialize/fromVarBigInt.md) - Serialize a big integer to a byte array.
+    - [fromObject](./src/utils/serialize/fromObject.md) - Serialize an object to a byte array.
+    - [fromArray](./src/utils/serialize/fromArray.md) - Serialize an array to a byte array.
+- [deserialize](./src/utils/deserialize/index.md)
+    - [toVarInt](./src/utils/deserialize/toVarInt.md) - Deserialize a byte array to a number.
+    - [toVarBigInt](./src/utils/deserialize/toVarBigInt.md) - Deserialize a byte array to a big integer.    
+    - [toObject](./src/utils/deserialize/toObject.md) - Deserialize a byte array to an object.
+    - [toArray](./src/utils/deserialize/toArray.md) - Deserialize a byte array to an array.
+    - [toString](./src/utils/deserialize/toString.md) - Deserialize a byte array to a string.
+- [kindToConstructor](./src/utils/kindToConstructor.md)
 
 #### Data Structures
 Some technical utilities are designed for specific data handling and management scenarios:
@@ -65,6 +83,37 @@ Some technical utilities are designed for specific data handling and management 
 - [TimeQueue](./src/utilities/timeQueue/README.md)
 - [TimeLock](./src/utilities/timeLock/README.md)
 
+## Network kind
+
+Each packet starts with a kind:
+
+```bash
+    UNKNOWN = 0,
+    PEER_INFO = 1,
+    REQUEST = 2,
+    RESPONSE = 3,
+    ACKHANDSHAKE = 4,
+    EPOCHBLOCK = 5,
+    CLUSTERBLOCK = 6,
+    HASHPROOF = 7,
+    TRANSACTION = 8,
+    TRANSITION = 9,
+    TRANSFER = 10,
+    STATEMENT = 11,
+    HANDSHAKE = 12,
+    QUORUMDECISION = 13,
+    QUORUMDECISIONVOTE = 14,
+    RELAYBLOCK = 15,
+    VOUCHER = 16,
+    ASSET = 17,
+    IDENTITY = 18,
+    GOVERNANCEPROPOSAL = 19,
+    GOVERNANCEVOTE = 20,
+    INSTRUCTION = 21,
+    RAW = 22,
+    PACKEDOBJECT = 23,
+    PACKEDARRAY = 24,
+```
 
 These data structures are exported separately to emphasize their utility nature and potential broader applicability outside the direct blockchain interaction scenarios.
 

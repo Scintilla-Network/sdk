@@ -1,8 +1,5 @@
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
-import { utils } from '@scintilla-network/keys';
-import { varbigint } from '@scintilla-network/keys/utils';
-const { uint8array, varint, json } = utils;
+import { sha256 } from '@scintilla-network/hashes/classic';
+import { varbigint, uint8array, varint, json } from '@scintilla-network/keys/utils';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
 /**
@@ -40,10 +37,10 @@ class Asset {
                         burn: ['scintilla'],
                     },
                     fees = [
-                        ['transfer', {
+                        {   type: 'transfer',
                             percent: 200n, // 0.000200 (200 microbasis points, 0.000200%)
                             max: 20n * 10n ** 6n // 20 basis points (20%)
-                        }]
+                        }
                     ],
                     metadata = {}
                 } = {}) {
@@ -51,15 +48,124 @@ class Asset {
         this.kind = 'ASSET';
         this.name = name ?? 'UNDEFINED';
         this.symbol = symbol ?? 'UNDEFINED';
-        this.supply =  { max: 100_000_000n * 10n**9n, total: 0n, circulating: 0n, ...supply };
-        this.decimals = decimals ?? 9;
+        this.supply =  {
+            max: BigInt(supply.max ?? 100_000_000n * 10n**9n),
+            total: BigInt(supply.total ?? 0n),
+            circulating: BigInt(supply.circulating ?? 0n),
+        }
+        this.decimals = BigInt(decimals ?? 9);
         this.consensus = consensus;
         this.distributions = distributions ?? [];
         this.permissions = permissions;
-        this.fees = fees;
-        this.metadata = metadata;
+        this.fees = [
+            {
+                type: 'transfer',
+                percent: BigInt(fees?.[0]?.percent ?? 200n),
+                max: BigInt(fees?.[0]?.max ?? 20n * 10n ** 6n),
+            }
+        ];  
+        this.metadata = metadata ?? {};
     }
 
+    static fromJSON(json) {
+        return new Asset({
+            ...json,
+        });
+    }
+
+
+    static fromUint8Array(inputArray) {
+        const assetProps = {};
+        let offset = 0;
+
+        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += elementKindLength;
+        if(elementKind !== NET_KINDS['ASSET']) {
+            throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['ASSET']}(ASSET)`);
+        }
+        assetProps.kind = NET_KINDS_ARRAY[elementKind];
+
+        // Name
+        const {value: nameLength, length: nameLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += nameLengthBytes;
+        assetProps.name = uint8array.toString(inputArray.subarray(offset, offset + nameLength));
+        offset += nameLength;
+
+
+
+        // Symbol
+        const {value: symbolLength, length: symbolLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += symbolLengthBytes;
+        assetProps.symbol = uint8array.toString(inputArray.subarray(offset, offset + symbolLength));
+        offset += symbolLength;
+
+        // Supply
+        const {value: supplyMax, length: supplyMaxBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        offset += supplyMaxBytes;
+        const {value: supplyTotal, length: supplyTotalBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        offset += supplyTotalBytes;
+        const {value: supplyCirculating, length: supplyCirculatingBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        offset += supplyCirculatingBytes;
+        assetProps.supply = {
+            max: supplyMax,
+            total: supplyTotal,
+            circulating: supplyCirculating
+        };
+
+
+        // Decimals
+        const {value: decimals, length: decimalsBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        assetProps.decimals = decimals;
+        offset += decimalsBytes;
+
+        // Consensus
+        const {value: consensusLength, length: consensusLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += consensusLengthBytes;
+        const consensusString = uint8array.toString(inputArray.subarray(offset, offset + consensusLength));
+        assetProps.consensus = json.parse(consensusString);
+        offset += consensusLength;
+
+        // Distributions
+        const {value: distributionsLength, length: distributionsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += distributionsLengthBytes;
+        const distributionsString = uint8array.toString(inputArray.subarray(offset, offset + distributionsLength));
+        assetProps.distributions = json.parse(distributionsString);
+        offset += distributionsLength;
+
+        // Permissions
+        const {value: permissionsLength, length: permissionsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += permissionsLengthBytes;
+        const permissionsString = uint8array.toString(inputArray.subarray(offset, offset + permissionsLength));
+        assetProps.permissions = json.parse(permissionsString);
+        offset += permissionsLength;
+
+        // Fees
+        const { value: feeAmount, length: feeAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += feeAmountBytes;
+
+        assetProps.fees = [];
+        for (let i = 0; i < feeAmount; i++) {
+            const {value: feeLength, length: feeLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+            offset += feeLengthBytes;
+            const feeString = uint8array.toString(inputArray.subarray(offset, offset + feeLength));
+            offset += feeLength;
+            assetProps.fees.push(json.parse(feeString));
+        }
+
+        // Metadata
+        const {value: metadataLength, length: metadataLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += metadataLengthBytes;
+        const metadataString = uint8array.toString(inputArray.subarray(offset, offset + metadataLength));
+        assetProps.metadata = json.parse(metadataString);
+        offset += metadataLength;
+
+        return new Asset(assetProps);
+    }
+
+    static fromHex(hex) {
+        const uint8Array = uint8array.fromHex(hex);
+        return Asset.fromUint8Array(uint8Array);
+    }
 
     toUint8Array(options = {}) {
         if(options.excludeKindPrefix === undefined) {
@@ -174,101 +280,8 @@ class Asset {
     }
 
 
-    static fromUint8Array(inputArray) {
-        const assetProps = {};
-        let offset = 0;
-
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += elementKindLength;
-        if(elementKind !== NET_KINDS['ASSET']) {
-            throw new Error('Invalid element kind');
-        }
-        assetProps.kind = NET_KINDS_ARRAY[elementKind];
-
-        // Name
-        const {value: nameLength, length: nameLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += nameLengthBytes;
-        assetProps.name = uint8array.toString(inputArray.subarray(offset, offset + nameLength));
-        offset += nameLength;
-
-
-
-        // Symbol
-        const {value: symbolLength, length: symbolLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += symbolLengthBytes;
-        assetProps.symbol = uint8array.toString(inputArray.subarray(offset, offset + symbolLength));
-        offset += symbolLength;
-
-        // Supply
-        const {value: supplyMax, length: supplyMaxBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        offset += supplyMaxBytes;
-        const {value: supplyTotal, length: supplyTotalBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        offset += supplyTotalBytes;
-        const {value: supplyCirculating, length: supplyCirculatingBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        offset += supplyCirculatingBytes;
-        assetProps.supply = {
-            max: supplyMax,
-            total: supplyTotal,
-            circulating: supplyCirculating
-        };
-
-
-        // Decimals
-        const {value: decimals, length: decimalsBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        assetProps.decimals = decimals;
-        offset += decimalsBytes;
-
-        // Consensus
-        const {value: consensusLength, length: consensusLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += consensusLengthBytes;
-        const consensusString = uint8array.toString(inputArray.subarray(offset, offset + consensusLength));
-        assetProps.consensus = json.parse(consensusString);
-        offset += consensusLength;
-
-        // Distributions
-        const {value: distributionsLength, length: distributionsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += distributionsLengthBytes;
-        const distributionsString = uint8array.toString(inputArray.subarray(offset, offset + distributionsLength));
-        assetProps.distributions = json.parse(distributionsString);
-        offset += distributionsLength;
-
-        // Permissions
-        const {value: permissionsLength, length: permissionsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += permissionsLengthBytes;
-        const permissionsString = uint8array.toString(inputArray.subarray(offset, offset + permissionsLength));
-        assetProps.permissions = json.parse(permissionsString);
-        offset += permissionsLength;
-
-        // Fees
-        const { value: feeAmount, length: feeAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += feeAmountBytes;
-
-        assetProps.fees = [];
-        for (let i = 0; i < feeAmount; i++) {
-            const {value: feeLength, length: feeLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-            offset += feeLengthBytes;
-            const feeString = uint8array.toString(inputArray.subarray(offset, offset + feeLength));
-            offset += feeLength;
-            assetProps.fees.push(json.parse(feeString));
-        }
-
-        // Metadata
-        const {value: metadataLength, length: metadataLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += metadataLengthBytes;
-        const metadataString = uint8array.toString(inputArray.subarray(offset, offset + metadataLength));
-        assetProps.metadata = json.parse(metadataString);
-        offset += metadataLength;
-
-        return new Asset(assetProps);
-    }
-
     toHex() {
         return uint8array.toHex(this.toUint8Array());
-    }
-
-    static fromHex(hex) {
-        const uint8Array = uint8array.fromHex(hex);
-        return Asset.fromUint8Array(uint8Array);
     }
 
     toHash(encoding = 'hex') {
@@ -277,6 +290,7 @@ class Asset {
         return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : hashUint8Array;
     }
 
+  
     /**
      * Returns the JSON representation of the Asset
      * @returns {Object} The JSON representation of the Asset
@@ -291,11 +305,24 @@ class Asset {
                 total: this.supply.total.toString(),
                 circulating: this.supply.circulating.toString()
             },
-            decimals: this.decimals,
+            decimals: this.decimals.toString(),
             consensus: this.consensus,
-            distributions: this.distributions,
+            distributions: this.distributions.map(distribution => ({
+                ...distribution,
+                weight: distribution?.weight.toString(),
+                roles: {
+                    ...distribution?.roles,
+                    proposers: distribution?.roles?.proposers.toString(),
+                    validators: distribution?.roles?.validators.toString(),
+                    treasury: distribution?.roles?.treasury.toString()
+                }
+            })),
             permissions: this.permissions,
-            fees: this.fees,
+            fees: this.fees.map(fee => ({
+                ...fee,
+                percent: fee?.percent?.toString(),
+                max: fee?.max.toString()
+            })),
             metadata: this.metadata
         };
     }

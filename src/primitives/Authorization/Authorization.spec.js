@@ -10,17 +10,108 @@ import { Asset } from '../Asset/Asset.js';
 
 describe('Authorization', () => {
     it('should create a Authorization instance', async () => {
-        
-        const element = new Asset({
-            name: 'CustomAsset',
-            symbol: 'CAT',
-        });
-        const signer = new Signer(uint8array.fromHex('337adff26342dfbf2bf140532ebd1c77fcd5a23a520a07a83fb78969821070b3'), 'test_moniker');
-        // const authorization = await Authorization.sign(element, signer);
 
-        const authorization = new Authorization();
-        authorization.sign(element, signer);
-        authorization.verify(element);
+        const auth = new Authorization({
+            signature: '64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b',
+            publicKey: '026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671',
+            moniker: 'alice',
+            address: 'sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c'
+          });
+
+        // expect(auth.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        // expect(auth.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
+        // expect(auth.moniker).toBe('alice');
+        // expect(auth.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
+
+
+        const bytes = auth.toUint8Array();
+        const hex = auth.toHex();
+        const hash = auth.toHash();
+
+        const parsedFromBytes = Authorization.fromUint8Array(bytes);
+        expect(parsedFromBytes.toHash()).toBe(hash);
+        expect(parsedFromBytes.toHex()).toBe(hex);
+
+        const parsedFromHex = Authorization.fromHex(hex);
+        expect(parsedFromHex.toHash()).toBe(hash);
+        expect(parsedFromHex.toHex()).toBe(hex);
+        
+        const json = auth.toJSON();
+        const parsedFromJson = Authorization.fromJSON(json);
+        expect(parsedFromJson.toHash()).toBe(hash);
+        expect(parsedFromJson.toHex()).toBe(hex);
+        
+        expect(parsedFromBytes.equals(parsedFromHex)).toBe(true);
+        expect(parsedFromBytes.equals(parsedFromJson)).toBe(true);
+        expect(parsedFromHex.equals(parsedFromJson)).toBe(true);
+        
+        
+        
+        // const hex = auth.toHex();
+        // expect(auth.toHash()).toBe(parsedFromBytes.toHash());
+
+
+        // const parsedFromHex = Authorization.fromHex(hex);
+        // console.log({parsedFromHex});
+
+        // const json = auth.toJSON();
+        // console.log({json});
+        // const parsedFromJson = Authorization.fromJSON(json);
+        // console.log({parsedFromJson});
+
+        // const hash = auth.toHash();
+        // expect(hash).toBe(parsedFromBytes.toHash());
+        // expect(hash).toBe(parsedFromHex.toHash());
+        // expect(hash).toBe(parsedFromJson.toHash());
+
+
+        
+        // expect(bytes).toBeInstanceOf(Uint8Array);
+        // expect(bytes[0]).toBe(1);
+        // expect(bytes[1]).toBe(2);
+        // expect(bytes[2]).toBe(4);
+        // expect(bytes[3]).toBe(8);
+        
+        // const deserialized = Authorization.fromUint8Array(bytes);
+        // expect(deserialized.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        // expect(deserialized.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
+        // expect(deserialized.moniker).toBe('alice');
+        // expect(deserialized.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
+
+        // const json = auth.toJSON();
+        // expect(json.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        // expect(json.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
+        // expect(json.moniker).toBe('alice');
+        // expect(json.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
+
+        // const deserializedFromJson = Authorization.fromJSON(json);
+        // expect(deserializedFromJson.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        // expect(deserializedFromJson.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
+        // expect(deserializedFromJson.moniker).toBe('alice');
+        // expect(deserializedFromJson.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
+
+        // const hash = auth.toHash();
+        // expect(hash).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        // const deserializedFromHash = Authorization.fromHash(hash);
+        // expect(deserializedFromHash.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        // expect(deserializedFromHash.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
+        // expect(deserializedFromHash.moniker).toBe('alice');
+        // expect(deserializedFromHash.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
+        
+        
+        
+      
+        
+        // const element = new Asset({
+        //     name: 'CustomAsset',
+        //     symbol: 'CAT',
+        // });
+        // const signer = new Signer(uint8array.fromHex('337adff26342dfbf2bf140532ebd1c77fcd5a23a520a07a83fb78969821070b3'), 'test_moniker');
+        // // const authorization = await Authorization.sign(element, signer);
+
+        // const authorization = new Authorization();
+        // authorization.sign(element, signer);
+        // authorization.verify(element);
 
     });
 });

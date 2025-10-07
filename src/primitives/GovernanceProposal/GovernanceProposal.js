@@ -1,18 +1,17 @@
 import { sha256 } from '@scintilla-network/hashes/classic';
-import { uint8array, varint, json } from '@scintilla-network/keys/utils';
+import { uint8array, varint, varbigint, json } from '@scintilla-network/keys/utils';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
 import makeDoc from '../../utils/makeDoc.js';
 // import signDoc from '../../utils/signDoc.js';
 // import verifyDoc from '../../utils/verifyDoc.js';
 import { SignableMessage } from '@scintilla-network/keys';
-import { Authorizations } from '../Authorizations/Authorizations.js';   
 
 class GovernanceProposal {
     constructor(options = {}) {
         this.kind = 'GOVERNANCEPROPOSAL';
         this.version = 1;
-        this.timestamp = options.timestamp || BigInt(Date.now());
+        this.timestamp = options.timestamp ? BigInt(options.timestamp) : BigInt(Date.now());
         
         this.title = options.title || '';
         this.description = options.description || '';
@@ -26,19 +25,130 @@ class GovernanceProposal {
         this.status = options.status ?? 'proposed';
         this.votes = options.votes ?? [];
         this.totalVotes = options.totalVotes ?? 0;
-        this.startDate = options.startDate || BigInt(Date.now());
-        this.endDate = options.endDate || BigInt(Date.now() + 10000);
+        this.startDate = options.startDate ? BigInt(options.startDate) : BigInt(Date.now());
+        this.endDate = options.endDate ? BigInt(options.endDate) : BigInt(Date.now() + 10000);
         if (!this.endDate) {
             throw new Error('GovernanceProposal must have an end date');
         }
         this.proposer = options.proposer || '';
         this.dao = options.dao || '';
-        this.authorizations = new Authorizations(options.authorizations);
+        this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: options.authorizations });
         this.hash = options.hash ?? null;
         if (!this.hash) {
             this.hash = this.computeHash();
         }
     }
+
+
+    static fromJSON(json) {
+        return new GovernanceProposal({
+            ...json,
+        });
+    }
+
+    static fromHex(hex) {
+        const uint8Array = uint8array.fromHex(hex);
+        return GovernanceProposal.fromUint8Array(uint8Array);
+    }
+
+
+    static fromUint8Array(inputArray) {
+        const proposalProps = {};
+        let offset = 0;
+
+        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += elementKindLength;
+        if(elementKind !== NET_KINDS['GOVERNANCEPROPOSAL']) {
+            throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['GOVERNANCEPROPOSAL']}(GOVERNANCEPROPOSAL)`);
+        }
+        proposalProps.kind = NET_KINDS_ARRAY[elementKind];
+
+        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        proposalProps.version = version;
+        offset += versionLength;
+
+        const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        proposalProps.timestamp = timestamp;
+        offset += timestampBytes;
+
+        // Title
+        const {value: titleLength, length: titleLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += titleLengthBytes;
+        proposalProps.title = uint8array.toString(inputArray.subarray(offset, offset + titleLength));
+        offset += titleLength;
+
+        // Description
+        const {value: descriptionLength, length: descriptionLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += descriptionLengthBytes;
+        proposalProps.description = uint8array.toString(inputArray.subarray(offset, offset + descriptionLength));
+        offset += descriptionLength;
+
+        // Funding
+        const {value: fundingLength, length: fundingLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += fundingLengthBytes;
+        const fundingString = uint8array.toString(inputArray.subarray(offset, offset + fundingLength));
+        proposalProps.funding = json.parse(fundingString);
+        offset += fundingLength;
+
+        // Rules
+        const {value: rulesLength, length: rulesLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += rulesLengthBytes;
+        const rulesString = uint8array.toString(inputArray.subarray(offset, offset + rulesLength));
+        proposalProps.rules = json.parse(rulesString);
+        offset += rulesLength;
+
+        // Status
+        const {value: statusLength, length: statusLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += statusLengthBytes;
+        proposalProps.status = uint8array.toString(inputArray.subarray(offset, offset + statusLength));
+        offset += statusLength;
+
+        // Votes
+        const {value: votesLength, length: votesLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += votesLengthBytes;
+        const votesString = uint8array.toString(inputArray.subarray(offset, offset + votesLength));
+        proposalProps.votes = json.parse(votesString);
+        offset += votesLength;
+
+        // Total Votes
+        const {value: totalVotes, length: totalVotesBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        proposalProps.totalVotes = totalVotes;
+        offset += totalVotesBytes;
+
+        // Start Date
+        const {value: startDate, length: startDateBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        proposalProps.startDate = startDate;
+        offset += startDateBytes;
+
+        // End Date
+        const {value: endDate, length: endDateBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        proposalProps.endDate = endDate;
+        offset += endDateBytes;
+
+        // Proposer
+        const {value: proposerLength, length: proposerLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += proposerLengthBytes;
+        proposalProps.proposer = uint8array.toString(inputArray.subarray(offset, offset + proposerLength));
+        offset += proposerLength;
+
+        // DAO
+        const {value: daoLength, length: daoLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += daoLengthBytes;
+        proposalProps.dao = uint8array.toString(inputArray.subarray(offset, offset + daoLength));
+        offset += daoLength;
+
+        // Hash
+        const {value: hashLength, length: hashLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += hashLengthBytes;
+        proposalProps.hash = uint8array.toString(inputArray.subarray(offset, offset + hashLength));
+        offset += hashLength;
+
+        // Authorizations
+        proposalProps.authorizations = Authorization.fromAuthorizationsUint8Array(inputArray.subarray(offset));
+
+        return new GovernanceProposal(proposalProps);
+    }
+
 
     considerVote({ vote, voter, votingPower }) {
         if(this.votes.find(v => v.voter === voter)) {
@@ -61,7 +171,7 @@ class GovernanceProposal {
         const kind = NET_KINDS[this.kind];
         const kindUint8Array = varint.encodeVarInt(kind, 'uint8array');
         const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
-        const timestampUint8Array = varint.encodeVarInt(this.timestamp, 'uint8array');
+        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
 
         // Title
         const titleUint8Array = uint8array.fromString(this.title);
@@ -94,10 +204,10 @@ class GovernanceProposal {
         const totalVotesUint8Array = varint.encodeVarInt(this.totalVotes, 'uint8array');
 
         // Start Date
-        const startDateUint8Array = varint.encodeVarInt(this.startDate, 'uint8array');
+        const startDateUint8Array = varbigint.encodeVarBigInt(this.startDate, 'uint8array');
 
         // End Date
-        const endDateUint8Array = varint.encodeVarInt(this.endDate, 'uint8array');
+        const endDateUint8Array = varbigint.encodeVarBigInt(this.endDate, 'uint8array');
 
         // Proposer
         const proposerUint8Array = uint8array.fromString(this.proposer);
@@ -112,7 +222,10 @@ class GovernanceProposal {
         const hashLengthUint8Array = varint.encodeVarInt(hashUint8Array.length, 'uint8array');
 
         // Authorizations
-        const authorizationsUint8Array = this.authorizations.toUint8Array();
+        let authorizationsUint8Array = new Uint8Array();
+        if(options.excludeAuthorizations === false) {
+            authorizationsUint8Array = Authorization.toAuthorizationsUint8Array(this.authorizations);
+        }
 
         const totalLength = (options.excludeKindPrefix ? 0 : kindUint8Array.length)
             + versionUint8Array.length
@@ -194,112 +307,8 @@ class GovernanceProposal {
         return result;
     }
 
-    static fromUint8Array(inputArray) {
-        const proposalProps = {};
-        let offset = 0;
-
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += elementKindLength;
-        if(elementKind !== NET_KINDS['GOVERNANCEPROPOSAL']) {
-            throw new Error('Invalid element kind');    
-        }
-        proposalProps.kind = NET_KINDS_ARRAY[elementKind];
-
-        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
-        proposalProps.version = version;
-        offset += versionLength;
-
-        const {value: timestamp, length: timestampBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        proposalProps.timestamp = timestamp;
-        offset += timestampBytes;
-
-        // Title
-        const {value: titleLength, length: titleLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += titleLengthBytes;
-        proposalProps.title = uint8array.toString(inputArray.subarray(offset, offset + titleLength));
-        offset += titleLength;
-
-        // Description
-        const {value: descriptionLength, length: descriptionLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += descriptionLengthBytes;
-        proposalProps.description = uint8array.toString(inputArray.subarray(offset, offset + descriptionLength));
-        offset += descriptionLength;
-
-        // Funding
-        const {value: fundingLength, length: fundingLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += fundingLengthBytes;
-        const fundingString = uint8array.toString(inputArray.subarray(offset, offset + fundingLength));
-        proposalProps.funding = json.parse(fundingString);
-        offset += fundingLength;
-
-        // Rules
-        const {value: rulesLength, length: rulesLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += rulesLengthBytes;
-        const rulesString = uint8array.toString(inputArray.subarray(offset, offset + rulesLength));
-        proposalProps.rules = json.parse(rulesString);
-        offset += rulesLength;
-
-        // Status
-        const {value: statusLength, length: statusLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += statusLengthBytes;
-        proposalProps.status = uint8array.toString(inputArray.subarray(offset, offset + statusLength));
-        offset += statusLength;
-
-        // Votes
-        const {value: votesLength, length: votesLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += votesLengthBytes;
-        const votesString = uint8array.toString(inputArray.subarray(offset, offset + votesLength));
-        proposalProps.votes = json.parse(votesString);
-        offset += votesLength;
-
-        // Total Votes
-        const {value: totalVotes, length: totalVotesBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        proposalProps.totalVotes = totalVotes;
-        offset += totalVotesBytes;
-
-        // Start Date
-        const {value: startDate, length: startDateBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        proposalProps.startDate = startDate;
-        offset += startDateBytes;
-
-        // End Date
-        const {value: endDate, length: endDateBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        proposalProps.endDate = endDate;
-        offset += endDateBytes;
-
-        // Proposer
-        const {value: proposerLength, length: proposerLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += proposerLengthBytes;
-        proposalProps.proposer = uint8array.toString(inputArray.subarray(offset, offset + proposerLength));
-        offset += proposerLength;
-
-        // DAO
-        const {value: daoLength, length: daoLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += daoLengthBytes;
-        proposalProps.dao = uint8array.toString(inputArray.subarray(offset, offset + daoLength));
-        offset += daoLength;
-
-        // Hash
-        const {value: hashLength, length: hashLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += hashLengthBytes;
-        proposalProps.hash = uint8array.toString(inputArray.subarray(offset, offset + hashLength));
-        offset += hashLength;
-
-        // Authorizations
-        const authBytes = inputArray.subarray(offset);
-        proposalProps.authorizations = Authorizations.fromUint8Array(authBytes);
-        offset += authBytes.length;
-
-        return new GovernanceProposal(proposalProps);
-    }
-
     toHex() {
         return uint8array.toHex(this.toUint8Array());
-    }
-
-    static fromHex(hex) {
-        const uint8Array = uint8array.fromHex(hex);
-        return GovernanceProposal.fromUint8Array(uint8Array);
     }
 
     computeHash() {
@@ -389,14 +398,9 @@ class GovernanceProposal {
             dao: this.dao,
         };
 
-        if (!excludeAuthorizations) {
-            json.authorizations = this.authorizations.authorizations.map(auth => ({
-                ...auth,
-                signature: auth.signature ? uint8array.toHex(auth.signature) : '',
-                publicKey: auth.publicKey ? uint8array.toHex(auth.publicKey) : ''
-            }));
+        if (excludeAuthorizations === false) {
+            json['authorizations'] = Authorization.toAuthorizationsJSON(this.authorizations);
         }
-
         return json;
     }
 }

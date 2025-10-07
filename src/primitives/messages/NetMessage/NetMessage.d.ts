@@ -20,6 +20,10 @@ export declare class NetMessage {
     toBuffer(): Buffer;
     static fromBuffer(buffer: Buffer): NetMessage;
     toHash(): string;
+    getPayloadKind(): string;
+    toPayloadKindInstance(): any;
+    toUint8Array(): Uint8Array;
+    static fromUint8Array(uint8Array: Uint8Array): NetMessage;
 }
 
 export default NetMessage;

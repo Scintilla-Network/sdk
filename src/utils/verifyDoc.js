@@ -16,8 +16,8 @@ function verifySignatures(element, authorizations, hash) {
             throw new Error('Signature is required for verification.');
         }
         const publicKey = authorization.publicKey;
-        const hexMessage = element?.toHex({ excludeSignatures: true, excludeAuthorization: true }) ?? element;
-        const hashMessage = hash ?? element?.toHash('hex', {excludeSignatures: true, excludeAuthorization: true}) ?? element;
+        const hexMessage = element?.toHex({ excludeAuthorizations: true }) ?? element;
+        const hashMessage = hash ?? element?.toHash('hex', {excludeAuthorizations: true}) ?? element;
 
         const verifyElement = hexMessage.length > 8192 ? hashMessage : hexMessage;
         const signingMessage = SignableMessage.fromHex(verifyElement);
@@ -33,8 +33,8 @@ function verifySignatures(element, authorizations, hash) {
         return signingMessage.verify(sigArray, pubKeyArray ?? '');
     });
     if(!valid){
-        // console.log('Invalid signatures for ', element.toHex({excludeSignatures: true, excludeAuthorization: true}));
-        console.log('Invalid signatures for ', element.toHash('hex', {excludeSignatures: true, excludeAuthorization: true}), element.toJSON());
+        // console.log('Invalid signatures for ', element.toHex({excludeAuthorizations: true}));
+        console.log('Invalid signatures for ', element.toHash('hex', {excludeAuthorizations: true}), element.toJSON());
         // throw new Error('Invalid signatures for ' + element.toJSON());
         return false;
     }

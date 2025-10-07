@@ -15,7 +15,7 @@ export default function makeDoc(element, signingSigner, _options = { nonce: 0, p
         throw new Error('Public key is required for document making.');
     }
     // if(data.toUInt8Array){
-    //     data = data.toUInt8Array({excludeAuthorization: false, excludeSignatures: false});
+    //     data = data.toUInt8Array({excludeAuthorizations: false});
     // }
     // let key = signingSigner.getPublicKey().toHexString();
     const privateKey = ExtendedPrivateKey.fromSeed(signingSigner.privateKey);   

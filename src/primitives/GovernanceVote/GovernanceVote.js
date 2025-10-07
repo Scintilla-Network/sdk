@@ -1,12 +1,10 @@
-import { sha256 } from '@scintilla-network/hashes/classic';
 import {  uint8array, varint, json } from '@scintilla-network/keys/utils';
+import { sha256 } from '@scintilla-network/hashes/classic';
+import { SignableMessage } from '@scintilla-network/keys';
+
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
 import makeDoc from '../../utils/makeDoc.js';
-// import signDoc from '../../utils/signDoc.js';
-// import verifyDoc from '../../utils/verifyDoc.js';
-import { SignableMessage } from '@scintilla-network/keys';
-import { Authorizations } from '../Authorizations/Authorizations.js';
 
 class GovernanceVote {
     constructor(options = {}) {
@@ -15,10 +13,82 @@ class GovernanceVote {
         this.proposal = options.proposal || '';
         this.vote = options.vote || '';
         this.dao = options.dao || '';
-        this.timestamp = options.timestamp || BigInt(Date.now());
+        this.timestamp = options.timestamp ? BigInt(options.timestamp) : BigInt(Date.now());
         this.voter = options.voter || '';
         this.votingPower = options.votingPower || 0;
-        this.authorizations = new Authorizations(options.authorizations);
+        this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: options?.authorizations });
+    }
+
+    static fromJSON(json) {
+        return new GovernanceVote({
+            ...json,
+        });
+    }
+
+    static fromUint8Array(inputArray) {
+        const voteProps = {};
+        let offset = 0;
+
+        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += elementKindLength;
+        if(elementKind !== NET_KINDS['GOVERNANCEVOTE']) {
+            throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['GOVERNANCEVOTE']}(GOVERNANCEVOTE)`);
+        }
+        voteProps.kind = NET_KINDS_ARRAY[elementKind];
+
+        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        voteProps.version = version;
+        offset += versionLength;
+
+        const {value: timestamp, length: timestampBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        voteProps.timestamp = timestamp;
+        offset += timestampBytes;
+
+        // Proposal
+        const {value: proposalLength, length: proposalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += proposalLengthBytes;
+        voteProps.proposal = uint8array.toString(inputArray.subarray(offset, offset + proposalLength));
+        offset += proposalLength;
+
+        // Vote
+        const {value: voteLength, length: voteLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += voteLengthBytes;
+        voteProps.vote = uint8array.toString(inputArray.subarray(offset, offset + voteLength));
+        offset += voteLength;
+
+        // DAO
+        const {value: daoLength, length: daoLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += daoLengthBytes;
+        voteProps.dao = uint8array.toString(inputArray.subarray(offset, offset + daoLength));
+        offset += daoLength;
+
+        // Voter
+        const {value: voterLength, length: voterLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += voterLengthBytes;
+        voteProps.voter = uint8array.toString(inputArray.subarray(offset, offset + voterLength));
+        offset += voterLength;
+
+        // Voting Power
+        const {value: votingPower, length: votingPowerBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        voteProps.votingPower = votingPower;
+        offset += votingPowerBytes;
+
+        // Authorizations
+        voteProps.authorizations = Authorization.fromAuthorizationsUint8Array(inputArray.subarray(offset));
+
+        return new GovernanceVote(voteProps);
+    }
+
+
+    static fromBuffer(buffer) {
+        const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+        return GovernanceVote.fromUint8Array(uint8Array);
+    }
+
+
+    static fromHex(hex) {
+        const uint8Array = uint8array.fromHex(hex);
+        return GovernanceVote.fromUint8Array(uint8Array);
     }
 
     toUint8Array(options = {}) {
@@ -53,9 +123,11 @@ class GovernanceVote {
         // Voting Power
         const votingPowerUint8Array = varint.encodeVarInt(this.votingPower, 'uint8array');
 
-
         // Authorizations
-        const authorizationsUint8Array = this.authorizations.toUint8Array();
+        let authorizationsUint8Array = new Uint8Array();
+        if(options.excludeAuthorizations === false) {
+            authorizationsUint8Array = Authorization.toAuthorizationsUint8Array(this.authorizations);
+        }
 
         const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length)
             + versionUint8Array.length
@@ -104,77 +176,12 @@ class GovernanceVote {
         return result;
     }
 
-    static fromUint8Array(inputArray) {
-        const voteProps = {};
-        let offset = 0;
-
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += elementKindLength;
-        if(elementKind !== NET_KINDS['GOVERNANCEVOTE']) {
-            throw new Error('Invalid element kind');
-        }
-        voteProps.kind = NET_KINDS_ARRAY[elementKind];
-
-        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
-        voteProps.version = version;
-        offset += versionLength;
-
-        const {value: timestamp, length: timestampBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        voteProps.timestamp = timestamp;
-        offset += timestampBytes;
-
-        // Proposal
-        const {value: proposalLength, length: proposalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += proposalLengthBytes;
-        voteProps.proposal = uint8array.toString(inputArray.subarray(offset, offset + proposalLength));
-        offset += proposalLength;
-
-        // Vote
-        const {value: voteLength, length: voteLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += voteLengthBytes;
-        voteProps.vote = uint8array.toString(inputArray.subarray(offset, offset + voteLength));
-        offset += voteLength;
-
-        // DAO
-        const {value: daoLength, length: daoLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += daoLengthBytes;
-        voteProps.dao = uint8array.toString(inputArray.subarray(offset, offset + daoLength));
-        offset += daoLength;
-
-        // Voter
-        const {value: voterLength, length: voterLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += voterLengthBytes;
-        voteProps.voter = uint8array.toString(inputArray.subarray(offset, offset + voterLength));
-        offset += voterLength;
-
-        // Voting Power
-        const {value: votingPower, length: votingPowerBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        voteProps.votingPower = votingPower;
-        offset += votingPowerBytes;
-
-        // Authorizations
-        voteProps.authorizations = Authorizations.fromUint8Array(inputArray.subarray(offset));
-        offset += voteProps.authorizations.toUint8Array().length;
-
-        return new GovernanceVote(voteProps);
-    }
-
     toBuffer() {
         return this.toUint8Array();
     }
 
-    static fromBuffer(buffer) {
-        const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-        return GovernanceVote.fromUint8Array(uint8Array);
-    }
-
     toHex() {
         return uint8array.toHex(this.toUint8Array());
-    }
-
-    static fromHex(hex) {
-        const uint8Array = uint8array.fromHex(hex);
-        return GovernanceVote.fromUint8Array(uint8Array);
     }
 
     toHash(encoding = 'hex') {
@@ -242,7 +249,7 @@ class GovernanceVote {
         return valid;
     }
 
-    toJSON({excludeAuthorizations = true} = {}) {
+    toJSON({excludeAuthorizations = false} = {}) {
         const json = {
             kind: this.kind,
             version: this.version,
@@ -254,12 +261,8 @@ class GovernanceVote {
             votingPower: this.votingPower,
         };
 
-        if (!excludeAuthorizations) {
-            json.authorizations = this.authorizations.authorizations.map(auth => ({
-                ...auth,
-                signature: auth.signature ? uint8array.toHex(auth.signature) : '',
-                publicKey: auth.publicKey ? uint8array.toHex(auth.publicKey) : ''
-            }));
+        if (excludeAuthorizations === false) {
+            json['authorizations'] = Authorization.toAuthorizationsJSON(this.authorizations);
         }
 
         return json;

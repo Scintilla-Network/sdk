@@ -1,15 +1,11 @@
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
-import { utils } from '@scintilla-network/keys';
-const { uint8array, varint } = utils;
-const { decodeVarInt, encodeVarInt } = varint;
+import { sha256 } from '@scintilla-network/hashes/classic';
+import { uint8array, varint } from '@scintilla-network/keys/utils';
 
 class HashProofHeader {
     constructor(options = {}) {
-        this.timestamp = options.timestamp ?? Date.now();
+        this.timestamp = options.timestamp ? BigInt(options.timestamp) : BigInt(Date.now());
         this.height = options.height ?? 0;
         this.previousHash = options.previousHash ?? null;
-        this.cluster = options.cluster ?? '';
         this.proposer = options.proposer ?? null;
         this.merkleRoot = options.merkleRoot ?? null;
         this.nonce = BigInt(options.nonce ?? 0n);
@@ -17,35 +13,98 @@ class HashProofHeader {
         this.version = options.version ?? 1;
     }
 
+
+    static fromUint8Array(uint8Array) {
+        let offset = 0;
+
+        // Version - decode from varint
+        const { value: version, length: versionLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += versionLength;
+
+        // Height - decode from varint
+        const { value: height, length: heightLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += heightLength;
+
+        // Timestamp - decode from varint
+        const { value: timestamp, length: timestampLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += timestampLength;
+
+        // Previous hash - fixed 32 bytes
+        const previousHashUint8Array = uint8Array.slice(offset, offset + 32);
+        const previousHash = uint8array.toHex(previousHashUint8Array);
+        offset += 32;
+
+        // Cluster - varint length + string data
+        const { value: clusterLength, length: clusterLengthBytes } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += clusterLengthBytes;
+        const clusterUint8Array = uint8Array.slice(offset, offset + Number(clusterLength));
+        const cluster = uint8array.toString(clusterUint8Array);
+        offset += Number(clusterLength);
+
+        // Proposer - varint length + string data
+        const { value: proposerLength, length: proposerLengthBytes } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += proposerLengthBytes;
+        const proposerUint8Array = uint8Array.slice(offset, offset + Number(proposerLength));
+        const proposer = uint8array.toString(proposerUint8Array);
+        offset += Number(proposerLength);
+
+        // Merkle root - fixed 32 bytes
+        const merkleRootUint8Array = uint8Array.slice(offset, offset + 32);
+        const merkleRoot = uint8array.toHex(merkleRootUint8Array);
+        offset += 32;
+
+        // Nonce - decode from varint
+        const { value: nonce, length: nonceLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += nonceLength;
+
+        // Difficulty - decode from varint
+        const { value: difficulty, length: difficultyLength } = varint.decodeVarInt(uint8Array.slice(offset));
+        offset += difficultyLength;
+
+        const blockHeader = new HashProofHeader({
+            version: Number(version),
+            height: Number(height),
+            timestamp: Number(timestamp),
+            previousHash: previousHash.match(/^0+$/) ? null : previousHash,
+            cluster,
+            proposer: proposerLength === 0 ? null : proposer,
+            merkleRoot: merkleRoot.match(/^0+$/) ? null : merkleRoot,
+            nonce: BigInt(nonce),
+            difficulty: BigInt(difficulty)
+        });
+
+        return blockHeader;
+    }
+
     toUint8Array() {
         // Version - use varint instead of fixed 4 bytes
-        const versionUint8Array = encodeVarInt(this.version);
+        const versionUint8Array = varint.encodeVarInt(this.version);
 
         // Height - use varint instead of fixed 4 bytes
-        const heightUint8Array = encodeVarInt(this.height);
+        const heightUint8Array = varint.encodeVarInt(this.height);
 
         // Timestamp - use varint for consistency, ensure it's a number
-        const timestampUint8Array = encodeVarInt(Number(this.timestamp));
+        const timestampUint8Array = varint.encodeVarInt(Number(this.timestamp));
 
         // Previous hash - fixed 32 bytes, null becomes all zeros
         const previousHashUint8Array = this.previousHash ? uint8array.fromHex(this.previousHash) : new Uint8Array(32);
         
         // Cluster - use varint for length
         const clusterUint8Array = uint8array.fromString(this.cluster);
-        const clusterLengthUint8Array = encodeVarInt(clusterUint8Array.length);
+        const clusterLengthUint8Array = varint.encodeVarInt(clusterUint8Array.length);
 
         // Proposer - use varint for length, can be empty
         const proposerUint8Array = this.proposer ? uint8array.fromString(this.proposer) : new Uint8Array(0);
-        const proposerLengthUint8Array = encodeVarInt(proposerUint8Array.length);
+        const proposerLengthUint8Array = varint.encodeVarInt(proposerUint8Array.length);
 
         // Merkle root - fixed 32 bytes, null becomes all zeros
         const merkleRootUint8Array = this.merkleRoot ? uint8array.fromHex(this.merkleRoot) : new Uint8Array(32);
 
         // Nonce - convert BigInt to Number for varint
-        const nonceUint8Array = encodeVarInt(Number(this.nonce));
+        const nonceUint8Array = varint.encodeVarInt(Number(this.nonce));
 
         // Difficulty - convert BigInt to Number for varint
-        const difficultyUint8Array = encodeVarInt(Number(this.difficulty));
+        const difficultyUint8Array = varint.encodeVarInt(Number(this.difficulty));
 
         const totalLength = versionUint8Array.length + heightUint8Array.length + timestampUint8Array.length 
             + previousHashUint8Array.length + clusterLengthUint8Array.length + clusterUint8Array.length 
@@ -92,68 +151,6 @@ class HashProofHeader {
             nonce: this.nonce.toString(),
             difficulty: this.difficulty.toString()
         };
-    }
-
-    static fromUint8Array(uint8Array) {
-        let offset = 0;
-
-        // Version - decode from varint
-        const { value: version, length: versionLength } = decodeVarInt(uint8Array.slice(offset));
-        offset += versionLength;
-
-        // Height - decode from varint
-        const { value: height, length: heightLength } = decodeVarInt(uint8Array.slice(offset));
-        offset += heightLength;
-
-        // Timestamp - decode from varint
-        const { value: timestamp, length: timestampLength } = decodeVarInt(uint8Array.slice(offset));
-        offset += timestampLength;
-
-        // Previous hash - fixed 32 bytes
-        const previousHashUint8Array = uint8Array.slice(offset, offset + 32);
-        const previousHash = uint8array.toHex(previousHashUint8Array);
-        offset += 32;
-
-        // Cluster - varint length + string data
-        const { value: clusterLength, length: clusterLengthBytes } = decodeVarInt(uint8Array.slice(offset));
-        offset += clusterLengthBytes;
-        const clusterUint8Array = uint8Array.slice(offset, offset + Number(clusterLength));
-        const cluster = uint8array.toString(clusterUint8Array);
-        offset += Number(clusterLength);
-
-        // Proposer - varint length + string data
-        const { value: proposerLength, length: proposerLengthBytes } = decodeVarInt(uint8Array.slice(offset));
-        offset += proposerLengthBytes;
-        const proposerUint8Array = uint8Array.slice(offset, offset + Number(proposerLength));
-        const proposer = uint8array.toString(proposerUint8Array);
-        offset += Number(proposerLength);
-
-        // Merkle root - fixed 32 bytes
-        const merkleRootUint8Array = uint8Array.slice(offset, offset + 32);
-        const merkleRoot = uint8array.toHex(merkleRootUint8Array);
-        offset += 32;
-
-        // Nonce - decode from varint
-        const { value: nonce, length: nonceLength } = decodeVarInt(uint8Array.slice(offset));
-        offset += nonceLength;
-
-        // Difficulty - decode from varint
-        const { value: difficulty, length: difficultyLength } = decodeVarInt(uint8Array.slice(offset));
-        offset += difficultyLength;
-
-        const blockHeader = new HashProofHeader({
-            version: Number(version),
-            height: Number(height),
-            timestamp: Number(timestamp),
-            previousHash: previousHash.match(/^0+$/) ? null : previousHash,
-            cluster,
-            proposer: proposerLength === 0 ? null : proposer,
-            merkleRoot: merkleRoot.match(/^0+$/) ? null : merkleRoot,
-            nonce: BigInt(nonce),
-            difficulty: BigInt(difficulty)
-        });
-
-        return blockHeader;
     }
 
     isValid() {

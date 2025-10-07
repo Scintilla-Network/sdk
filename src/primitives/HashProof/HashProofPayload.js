@@ -1,5 +1,3 @@
-import { classic } from '@scintilla-network/hashes';
-const { sha256 } = classic;
 import Transition from "../Transition/Transition.js";
 import Transfer from "../Transfer/Transfer.js";
 import Transaction from "../Transaction/Transaction.js";
@@ -8,12 +6,9 @@ import GovernanceProposal from "../GovernanceProposal/GovernanceProposal.js";
 import GovernanceVote from "../GovernanceVote/GovernanceVote.js";
 // @ts-ignore
 import {Tree} from "@truestamp/tree";
-import { utils } from '@scintilla-network/keys';
+import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { NET_KINDS } from '../messages/NetMessage/NET_KINDS.js';
 import { NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
-const { uint8array, json, varint } = utils;
-const { sortedJsonByKeyStringify } = json;
-const { encodeVarInt, decodeVarInt } = varint;
 
 class HashProofPayload {
     constructor(options) {
@@ -51,6 +46,75 @@ class HashProofPayload {
                 }
            
             }
+        }
+    }
+
+    static fromHex(hex) {
+        const uint8Array = uint8array.fromHex(hex);
+        return this.fromUint8Array(uint8Array);
+    }
+
+    static fromUint8Array(inputArray) {
+        try {
+            let offset = 0;
+            
+            // Read the number of elements
+            const {value: elementsLength, length: elementsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+            offset += elementsLengthBytes;
+
+            const reconstructedElements = [];
+            
+            for (let i = 0; i < elementsLength; i++) {
+                // // Read element length
+                // const {value: elementLength, length: elementLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+                // offset += elementLengthBytes;
+                
+                // // Extract element bytes
+                // const elementBytes = inputArray.subarray(offset - elementLengthBytes, offset + elementLength);
+                // offset += elementLength;
+                
+                const elementBytes = inputArray.subarray(offset);
+                // Determine element kind by reading the first varint (NET_KINDS value)
+                const {value: elementKindValue} = varint.decodeVarInt(elementBytes);
+                const elementKind = NET_KINDS_ARRAY[elementKindValue];
+                // Reconstruct the element based on its kind
+                let element;
+                switch (elementKindValue) {
+                    case NET_KINDS['TRANSACTION']:
+                        element = Transaction.fromUint8Array(elementBytes);
+                        offset += elementBytes.length;
+                        break;
+                    case NET_KINDS['TRANSITION']:
+                        element = Transition.fromUint8Array(elementBytes);
+                        offset += elementBytes.length;
+                        break;
+                    case NET_KINDS['TRANSFER']:
+                        element = Transfer.fromUint8Array(elementBytes);
+                        offset += elementBytes.length;
+                        break;
+                    case NET_KINDS['VOUCHER']:
+                        element = Voucher.fromUint8Array(elementBytes);
+                        offset += elementBytes.length;
+                        break;
+                    case NET_KINDS['GOVERNANCEPROPOSAL']:
+                        element = GovernanceProposal.fromUint8Array(elementBytes);
+                        offset += elementBytes.length;
+                        break;
+                    case NET_KINDS['GOVERNANCEVOTE']:
+                        element = GovernanceVote.fromUint8Array(elementBytes);
+                        offset += elementBytes.length;
+                        break;
+                    default:    
+                        throw new Error(`Unknown element kind: ${elementKind} - NET_KINDS: ${NET_KINDS_ARRAY[elementKindValue]}`);
+                }
+                
+                reconstructedElements.push(element);
+            }
+
+            return new HashProofPayload({ data: reconstructedElements });
+        } catch (e) {
+            console.error('Failed to parse HashProofPayload from uint8Array:', e);
+            throw new Error(`Failed to parse HashProofPayload from uint8Array: ${e.message} ${e.stack}`);
         }
     }
 
@@ -141,75 +205,6 @@ class HashProofPayload {
 
     toHash() {
         return uint8array.toHex(this.toUint8Array());
-    }
-
-    static fromHex(hex) {
-        const uint8Array = uint8array.fromHex(hex);
-        return this.fromUint8Array(uint8Array);
-    }
-
-    static fromUint8Array(inputArray) {
-        try {
-            let offset = 0;
-            
-            // Read the number of elements
-            const {value: elementsLength, length: elementsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-            offset += elementsLengthBytes;
-
-            const reconstructedElements = [];
-            
-            for (let i = 0; i < elementsLength; i++) {
-                // // Read element length
-                // const {value: elementLength, length: elementLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-                // offset += elementLengthBytes;
-                
-                // // Extract element bytes
-                // const elementBytes = inputArray.subarray(offset - elementLengthBytes, offset + elementLength);
-                // offset += elementLength;
-                
-                const elementBytes = inputArray.subarray(offset);
-                // Determine element kind by reading the first varint (NET_KINDS value)
-                const {value: elementKindValue} = varint.decodeVarInt(elementBytes);
-                const elementKind = NET_KINDS_ARRAY[elementKindValue];
-                // Reconstruct the element based on its kind
-                let element;
-                switch (elementKindValue) {
-                    case NET_KINDS['TRANSACTION']:
-                        element = Transaction.fromUint8Array(elementBytes);
-                        offset += elementBytes.length;
-                        break;
-                    case NET_KINDS['TRANSITION']:
-                        element = Transition.fromUint8Array(elementBytes);
-                        offset += elementBytes.length;
-                        break;
-                    case NET_KINDS['TRANSFER']:
-                        element = Transfer.fromUint8Array(elementBytes);
-                        offset += elementBytes.length;
-                        break;
-                    case NET_KINDS['VOUCHER']:
-                        element = Voucher.fromUint8Array(elementBytes);
-                        offset += elementBytes.length;
-                        break;
-                    case NET_KINDS['GOVERNANCEPROPOSAL']:
-                        element = GovernanceProposal.fromUint8Array(elementBytes);
-                        offset += elementBytes.length;
-                        break;
-                    case NET_KINDS['GOVERNANCEVOTE']:
-                        element = GovernanceVote.fromUint8Array(elementBytes);
-                        offset += elementBytes.length;
-                        break;
-                    default:    
-                        throw new Error(`Unknown element kind: ${elementKind} - NET_KINDS: ${NET_KINDS_ARRAY[elementKindValue]}`);
-                }
-                
-                reconstructedElements.push(element);
-            }
-
-            return new HashProofPayload({ data: reconstructedElements });
-        } catch (e) {
-            console.error('Failed to parse HashProofPayload from uint8Array:', e);
-            throw new Error(`Failed to parse HashProofPayload from uint8Array: ${e.message} ${e.stack}`);
-        }
     }
 
     toJSON() {

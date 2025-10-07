@@ -1,18 +1,29 @@
 import { sha256  } from '@scintilla-network/hashes/classic';
-import makeDoc from '../../utils/makeDoc.js';
-import { uint8array, hex, varint, json, varbigint, utf8 } from '@scintilla-network/keys/utils';
-const { decodeVarBigInt, encodeVarBigInt } = varbigint;
-const { decodeVarInt, encodeVarInt } = varint;
-import transformObjectNumbersToBigInt from '../../utils/transformObjectNumbersToBigInt.js';
-
-// @ts-ignore
+import { uint8array, varint, varbigint } from '@scintilla-network/keys/utils';
 import { SignableMessage } from '@scintilla-network/keys';
-import signDoc from '../../utils/signDoc.js';
-// import verifyDoc from '../../utils/verifyDoc.js';
 
+import makeDoc from '../../utils/makeDoc.js';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
-// import { Authorization } from '../Authorization/Authorization.js';
-import { Authorizations } from '../Authorizations/Authorizations.js';
+import { Authorization } from '../Authorization/Authorization.js';
+import { serialize } from '../../utils/serialize/index.js';
+// import { deserialize } from '../../utils/deserialize/index.js';
+import deserialize from '../../utils/deserialize/index.js';
+import { kindToConstructor } from '../../utils/kindToConstructor.js';
+
+function loadData(data) {
+    return data.map(datum => {
+        try {
+            if(datum.kind && !datum.fromJSON){
+                const constructor = kindToConstructor(datum.kind);
+                return constructor.fromJSON(datum);
+            }
+            return datum;
+        } catch (e) {
+            console.error('Failed to parse datum:', e, datum);
+            throw new Error(`Failed to parse datum: ${e.message}`);
+        }
+    });
+}
 
 export class Voucher {
     constructor({
@@ -24,178 +35,26 @@ export class Voucher {
         output = { amount: 0n, recipient: '' },
         stack = [],
         data = [],
-        timelock = { startAt: 0n, endAt: 0n },
+        timelock = { startTick: 0n, endTick: 0n },
         authorizations = [],
     } = {}) {
         this.kind = 'VOUCHER';
         this.version = version;
-        this.timestamp = timestamp || BigInt(Date.now());
+        this.timestamp = timestamp ? BigInt(timestamp) : BigInt(Date.now());
 
         this.asset = asset?.toLowerCase() ?? '';
-        this.inputs = transformObjectNumbersToBigInt(inputs);
-        this.output = output;
+        this.inputs = inputs?.map(input => ({ amount: BigInt(input.amount), hash: input.hash })) ?? [];
+        this.output = { amount: BigInt(output.amount), recipient: output.recipient };
         this.stack = stack; 
         // Stack are not active on V1
         if(this.stack.length > 0) {
             throw new Error('Stack is not supported on V1');
         }
-        this.data = data;
-        if(this.data.length > 1) {
-            throw new Error('V1 Limit for data to max 1 item');
-        }
-        this.timelock = transformObjectNumbersToBigInt(timelock);
-        // this.authorizations = authorizations.map(auth => ({
-        //     ...auth,
-        //     signature: typeof auth.signature === 'string' ? uint8array.fromHex(auth.signature) : auth.signature,
-        //     publicKey: typeof auth.publicKey === 'string' ? uint8array.fromHex(auth.publicKey) : auth.publicKey
-        // }));
-        this.authorizations = new Authorizations(authorizations);
-        // this.authorizations = 
-        
+        this.data = loadData(data);
+
+        this.timelock = {startTick: BigInt(timelock?.startTick ?? 0), endTick: BigInt(timelock?.endTick ?? 0)};
+        this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations });
         this.hash = hash ?? this.computeHash();
-    }
-
-    static fromJSON(json) {
-        return new Voucher(json);
-    }
-
-    toUint8Array(options = {}) {
-        if(options.excludeAuthorizations === undefined) {
-            options.excludeAuthorizations = false;
-        }
-        if(options.excludeKindPrefix === undefined) {
-            options.excludeKindPrefix = false;
-        }
-
-        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['VOUCHER'], 'uint8array');
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
-
-        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
-
-        const assetUint8Array = uint8array.fromString(this.asset);
-        const assetLengthUint8Array = varint.encodeVarInt(assetUint8Array.length, 'uint8array');
-
-        // Inputs
-        const inputsAmountUint8Array = varint.encodeVarInt(this.inputs.length, 'uint8array');
-        let inputsItemsUint8Array = new Uint8Array();
-
-        this.inputs.forEach(input => {
-            const inputAmountUint8Array = varbigint.encodeVarBigInt(input.amount, 'uint8array');
-            const inputHashBytes = uint8array.fromHex(input.hash);
-            const hashLengthUint8Array = varint.encodeVarInt(inputHashBytes.length, 'uint8array');
-
-            const length = inputAmountUint8Array.length + hashLengthUint8Array.length + inputHashBytes.length;
-            const inputUint8Array = new Uint8Array(length);
-            inputUint8Array.set(inputAmountUint8Array, 0);
-            inputUint8Array.set(hashLengthUint8Array, inputAmountUint8Array.length);
-            inputUint8Array.set(inputHashBytes, inputAmountUint8Array.length + hashLengthUint8Array.length);
-            inputsItemsUint8Array = new Uint8Array([...inputsItemsUint8Array, ...inputUint8Array]);
-
-        });
-
-        // Only one output
-        const outputAmountUint8Array = varbigint.encodeVarBigInt(this.output.amount, 'uint8array');
-
-        // Recipient length is encoded as varint
-        const outputRecipientLengthUint8Array = varint.encodeVarInt(this.output.recipient.length, 'uint8array');
-        const outputRecipientUint8Array = uint8array.fromString(this.output.recipient);
-
-        // Stack length is encoded as varint
-        const stackLengthUint8Array = varint.encodeVarInt(this.stack.length, 'uint8array');
-        const stackUint8Array = [];
-        // Stack are not active on V1
-        if(this.stack.length > 0) {
-            throw new Error('Stack is not supported on V1');
-        }
-        // this.stack.forEach(item => {
-        //     const itemLengthUint8Array = varint.encodeVarInt(item.length, 'uint8array');
-        //     const itemUint8Array = uint8array.fromString(item);
-        //     stackUint8Array.push(...itemLengthUint8Array, ...itemUint8Array);
-        // });
-
-        // Data length is encoded as varint 
-        const dataLengthUint8Array = varint.encodeVarInt(this.data.length, 'uint8array');
-        if(this.data.length > 1) {
-            throw new Error('V1 Limit for data to max 1 item');
-        }
-        const dataUint8Array = [];
-
-        this.data.forEach(item => { 
-            // Consider data to text 
-            const itemString = JSON.stringify(item);
-            if(itemString.length > 127) {
-                throw new Error('V1 Limit for data to max 127 characters');
-            }
-            const itemLengthUint8Array = varint.encodeVarInt(itemString.length, 'uint8array');
-            const itemUint8Array = uint8array.fromString(itemString);
-            dataUint8Array.push(...itemLengthUint8Array, ...itemUint8Array);
-        });
-
-
-        // Timelock
-        const timelockStartAtUint8Array = varbigint.encodeVarBigInt(this.timelock.startAt, 'uint8array');
-        const timelockEndAtUint8Array = varbigint.encodeVarBigInt(this.timelock.endAt, 'uint8array');
-
-        // const authorizationsLengthUint8Array = varint.encodeVarInt(this.authorizations.length, 'uint8array');
-        const authorizationsUint8Array = this.authorizations.toUint8Array();
-        // this.authorizations.forEach(authorization => {
-        //     const authorizationUint8Array = authorization.toUint8Array();
-        //     authorizationsUint8Array.push(...authorizationUint8Array);
-        // });
-
-        let totalLength = 
-        (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
-        + versionUint8Array.length 
-        + timestampUint8Array.length
-        + assetUint8Array.length + assetLengthUint8Array.length
-        + inputsAmountUint8Array.length + inputsItemsUint8Array.length 
-        + outputAmountUint8Array.length + outputRecipientLengthUint8Array.length + outputRecipientUint8Array.length 
-        + stackLengthUint8Array.length + stackUint8Array.length
-        + dataLengthUint8Array.length + dataUint8Array.length
-        + timelockStartAtUint8Array.length + timelockEndAtUint8Array.length //+ timelockCreatedAtUint8Array.length
-        + (options.excludeAuthorizations ? 0 : authorizationsUint8Array.length);
-
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-
-        if(options.excludeKindPrefix === false) {
-            result.set(elementKindUint8Array, offset); offset += elementKindUint8Array.length;
-        }
-        result.set(versionUint8Array, offset); offset += versionUint8Array.length;
-        result.set(timestampUint8Array, offset); offset += timestampUint8Array.length;
-        // Asset length
-        result.set(assetLengthUint8Array, offset); offset += assetLengthUint8Array.length;
-        // Asset
-        result.set(assetUint8Array, offset); offset += assetUint8Array.length;
-            // Input length
-        result.set(inputsAmountUint8Array, offset); offset += inputsAmountUint8Array.length;
-        // Inputs
-        result.set(inputsItemsUint8Array, offset); offset += inputsItemsUint8Array.length;
-
-        // Output
-        result.set(outputAmountUint8Array, offset); offset += outputAmountUint8Array.length;
-
-        // Output recipient
-        result.set(outputRecipientLengthUint8Array, offset); offset += outputRecipientLengthUint8Array.length;
-        result.set(outputRecipientUint8Array, offset); offset += outputRecipientUint8Array.length;
-
-        // Stack
-        result.set(stackLengthUint8Array, offset); offset += stackLengthUint8Array.length;
-        result.set(stackUint8Array, offset); offset += stackUint8Array.length;  
-
-        // Data
-        result.set(dataLengthUint8Array, offset); offset += dataLengthUint8Array.length;
-        result.set(dataUint8Array, offset); offset += dataUint8Array.length;
-
-        result.set(timelockStartAtUint8Array, offset); offset += timelockStartAtUint8Array.length;
-        result.set(timelockEndAtUint8Array, offset); offset += timelockEndAtUint8Array.length;
-        // result.set(timelockCreatedAtUint8Array, offset); offset += timelockCreatedAtUint8Array.length;
-
-        if(options.excludeAuthorizations === false) {
-            // result.set(authorizationsLengthUint8Array, offset); offset += authorizationsLengthUint8Array.length;
-            result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
-        }
-        return result;
     }
 
 
@@ -205,7 +64,7 @@ export class Voucher {
         const {value: elementKind, length: elementKindBytes} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += elementKindBytes;
         if(elementKind !== NET_KINDS['VOUCHER']) {
-            throw new Error('Invalid element kind');
+            throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['VOUCHER']}(VOUCHER)`);
         }
 
         const kind = NET_KINDS_ARRAY[elementKind];
@@ -213,7 +72,7 @@ export class Voucher {
         const {value: version, length: versionBytes} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += versionBytes;
         if(version !== 1) {
-            throw new Error('Invalid version');
+            throw new Error(`Invalid version: ${version} - Expected: 1`);
         }
 
         const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
@@ -268,37 +127,19 @@ export class Voucher {
         }
 
         // Data
-        const {value: dataLength, length: dataLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        offset += dataLengthBytes;
-        const data = [];
-        for (let i = 0; i < dataLength; i++) {
-            const {value: itemLength, length: itemLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-            offset += itemLengthBytes;
-            const item = JSON.parse(uint8array.toString(inputArray.subarray(offset, offset + itemLength)));
-            offset += itemLength;
-            data.push(item);
-        }
+        const {value: dataTotalLength, length: dataTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        offset += dataTotalLengthBytes;
+        const data = deserialize.toArray(inputArray.subarray(offset, offset + dataTotalLength)).value;
+        offset += dataTotalLength;
 
         // Timelock (each value var int)
-        const {value: startAt, length: startAtBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        offset += startAtBytes;
-        const {value: endAt, length: endAtBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        offset += endAtBytes;
-        // const {value: createdAt, length: createdAtBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
-        // offset += createdAtBytes;
-        const timelock = { startAt: BigInt(startAt), endAt: BigInt(endAt) };
+        const {value: startTick, length: startTickBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        offset += startTickBytes;
+        const {value: endTick, length: endTickBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        offset += endTickBytes;
+        const timelock = { startTick: BigInt(startTick), endTick: BigInt(endTick) };
 
-        // let authorizations = null;
-        //  const {value: authorizationsAmount, length: authorizationsAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        // offset += authorizationsAmountBytes;
-        const authBytes = inputArray.subarray(offset);
-        let authorizations = Authorizations.fromUint8Array(authBytes);
-        offset += authBytes.length;
-        // for (let i = 0; i < authorizationsAmount; i++) {
-        //     const authBytes = inputArray.subarray(offset);
-        //     authorizations.push(Authorizations.fromUint8Array(authBytes));
-        //     offset += authBytes.length;
-        // }
+        const authorizations = Authorization.fromAuthorizationsUint8Array(inputArray.subarray(offset));
 
         const props = {
             kind,
@@ -316,27 +157,156 @@ export class Voucher {
     }
 
     static fromHex(hex) {
-        // const buffer = Buffer.from(hex, 'hex');
-        // return Voucher.fromBuffer(buffer);
         return Voucher.fromUint8Array(uint8array.fromHex(hex));
     }
 
+    static fromJSON(json) {
+        return new Voucher({
+            ...json,
+            inputs: json.inputs.map(input => ({ amount: BigInt(input.amount), hash: input.hash })),
+            output: { amount: BigInt(json.output.amount), recipient: json.output.recipient },
+            stack: json.stack,
+            data: json.data,
+            timelock: { startTick: BigInt(json.timelock.startTick), endTick: BigInt(json.timelock.endTick) },
+            authorizations: Authorization.fromAuthorizationsJSON({ authorizations: json.authorizations }),
+        });
+    }
+
+    toUint8Array(options = {}) {
+        if(options.excludeAuthorizations === undefined) {
+            options.excludeAuthorizations = false;
+        }
+        if(options.excludeKindPrefix === undefined) {
+            options.excludeKindPrefix = false;
+        }
+        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['VOUCHER'], 'uint8array');
+        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
+
+        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
+
+        const assetUint8Array = uint8array.fromString(this.asset);
+        const assetLengthUint8Array = varint.encodeVarInt(assetUint8Array.length, 'uint8array');
+
+        // Inputs
+        const inputsAmountUint8Array = varint.encodeVarInt(this.inputs.length, 'uint8array');
+        let inputsItemsUint8Array = new Uint8Array();
+
+        this.inputs.forEach(input => {
+            const inputAmountUint8Array = varbigint.encodeVarBigInt(input.amount, 'uint8array');
+            const inputHashBytes = uint8array.fromHex(input.hash);
+            const hashLengthUint8Array = varint.encodeVarInt(inputHashBytes.length, 'uint8array');
+
+            const length = inputAmountUint8Array.length + hashLengthUint8Array.length + inputHashBytes.length;
+            const inputUint8Array = new Uint8Array(length);
+            inputUint8Array.set(inputAmountUint8Array, 0);
+            inputUint8Array.set(hashLengthUint8Array, inputAmountUint8Array.length);
+            inputUint8Array.set(inputHashBytes, inputAmountUint8Array.length + hashLengthUint8Array.length);
+            inputsItemsUint8Array = new Uint8Array([...inputsItemsUint8Array, ...inputUint8Array]);
+
+        });
+
+        // Only one output
+        const outputAmountUint8Array = varbigint.encodeVarBigInt(this.output.amount, 'uint8array');
+
+        // Recipient length is encoded as varint
+        const outputRecipientLengthUint8Array = varint.encodeVarInt(this.output.recipient.length, 'uint8array');
+        const outputRecipientUint8Array = uint8array.fromString(this.output.recipient);
+
+        // Stack length is encoded as varint
+        const stackLengthUint8Array = varint.encodeVarInt(this.stack.length, 'uint8array');
+        const stackUint8Array = [];
+        // Stack are not active on V1
+        if(this.stack.length > 0) {
+            throw new Error('Stack is not supported on V1');
+        }
+       
+
+        const dataUint8Array = serialize.fromArray(this.data).value;
+        const dataTotalLengthUint8Array = varint.encodeVarInt(dataUint8Array.length, 'uint8array');
+
+        // Timelock
+        const timelockStartAtUint8Array = varbigint.encodeVarBigInt(this.timelock.startTick, 'uint8array');
+        const timelockEndAtUint8Array = varbigint.encodeVarBigInt(this.timelock.endTick, 'uint8array');
+
+
+        // Authorizations
+        let authorizationsUint8Array = new Uint8Array();
+        if(options.excludeAuthorizations === false) {
+            authorizationsUint8Array = Authorization.toAuthorizationsUint8Array(this.authorizations);
+        }
+
+        let totalLength = 
+        (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
+        + versionUint8Array.length 
+        + timestampUint8Array.length
+        + assetUint8Array.length + assetLengthUint8Array.length
+        + inputsAmountUint8Array.length + inputsItemsUint8Array.length 
+        + outputAmountUint8Array.length + outputRecipientLengthUint8Array.length + outputRecipientUint8Array.length 
+        + stackLengthUint8Array.length + stackUint8Array.length
+        + dataTotalLengthUint8Array.length + dataUint8Array.length
+        + timelockStartAtUint8Array.length + timelockEndAtUint8Array.length //+ timelockCreatedAtUint8Array.length
+        + (options.excludeAuthorizations ? 0 : authorizationsUint8Array.length);
+
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+
+        if(options.excludeKindPrefix === false) {
+            result.set(elementKindUint8Array, offset); offset += elementKindUint8Array.length;
+        }
+        result.set(versionUint8Array, offset); offset += versionUint8Array.length;
+        result.set(timestampUint8Array, offset); offset += timestampUint8Array.length;
+        // Asset length
+        result.set(assetLengthUint8Array, offset); offset += assetLengthUint8Array.length;
+        // Asset
+        result.set(assetUint8Array, offset); offset += assetUint8Array.length;
+            // Input length
+        result.set(inputsAmountUint8Array, offset); offset += inputsAmountUint8Array.length;
+        // Inputs
+        result.set(inputsItemsUint8Array, offset); offset += inputsItemsUint8Array.length;
+
+        // Output
+        result.set(outputAmountUint8Array, offset); offset += outputAmountUint8Array.length;
+
+        // Output recipient
+        result.set(outputRecipientLengthUint8Array, offset); offset += outputRecipientLengthUint8Array.length;
+        result.set(outputRecipientUint8Array, offset); offset += outputRecipientUint8Array.length;
+
+        // Stack
+        result.set(stackLengthUint8Array, offset); offset += stackLengthUint8Array.length;
+        result.set(stackUint8Array, offset); offset += stackUint8Array.length;  
+
+        // Data
+        result.set(dataTotalLengthUint8Array, offset); offset += dataTotalLengthUint8Array.length;
+        result.set(dataUint8Array, offset); offset += dataUint8Array.length;
+
+        result.set(timelockStartAtUint8Array, offset); offset += timelockStartAtUint8Array.length;
+        result.set(timelockEndAtUint8Array, offset); offset += timelockEndAtUint8Array.length;
+
+        if(options.excludeAuthorizations === false) {
+            result.set(authorizationsUint8Array, offset); offset += authorizationsUint8Array.length;
+        }
+        return result;
+    }
+
     computeHash() {
-        const array = this.toUint8Array();
+        const array = this.toUint8Array({excludeAuthorizations: true});
         const hash = sha256(array);
         return uint8array.toHex(hash);
     }
 
-    toHash() {
-        return this.computeHash();
+    toHash(encoding = 'hex', {excludeAuthorizations = false} = {}) {
+        const uint8Array = this.toUint8Array({ excludeAuthorizations });
+        const hashUint8Array = sha256(uint8Array);
+        return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
     }
 
-    toHex() {
-        return uint8array.toHex(this.toUint8Array());
+    toHex( {excludeAuthorizations = false} = {}) {
+        return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
     toJSON({excludeAuthorizations = false} = {}) {
         const json = {
+            kind: this.kind,
             version: this.version,
             timestamp: this.timestamp,
             asset: this.asset,
@@ -351,18 +321,13 @@ export class Voucher {
             stack: this.stack,
             data: this.data,
             timelock: {
-                startAt: this.timelock.startAt.toString(),
-                endAt: this.timelock.endAt.toString(),
+                startTick: this.timelock.startTick.toString(),
+                endTick: this.timelock.endTick.toString(),
             },
         };
 
         if (!excludeAuthorizations) {
-            // Auth.signature and Auth.publicKey are Uint8Arrays, we need to convert them to strings
-            json.authorizations = this.authorizations.authorizations.map(auth => ({
-                ...auth,
-                signature: uint8array.toHex(auth.signature),
-                publicKey: auth.publicKey ? uint8array.toHex(auth.publicKey) : ''
-            }));
+            json.authorizations = Authorization.toAuthorizationsJSON(this.authorizations);
         }
 
         return json;
@@ -372,12 +337,11 @@ export class Voucher {
         if(authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
         }
-        this.authorizations.addAuthorization(authorization);
+        this.authorizations.push(authorization);
     }
 
     verifyAuthorizations() {
-        // return verifyDoc(this);
-        return this.authorizations.verify(this);
+        return this.authorizations.every(auth => auth.verify(this));
     }
 
     toBase64() {
@@ -386,7 +350,7 @@ export class Voucher {
     }
 
     toSignableMessage() {
-        return new SignableMessage(this.toHash());
+        return new SignableMessage(this.toHash('hex', {excludeAuthorizations: true}));
     }
 
     toDoc(signer) {
@@ -394,8 +358,13 @@ export class Voucher {
     }
 
     async sign(signer) {
-        // return signDoc(await this.toDoc(signer));
-        this.authorizations.sign(this, signer);
+        let authorization = new Authorization();
+        const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
+        if(existingAuthorization){
+            this.authorizations.splice(this.authorizations.indexOf(existingAuthorization), 1);
+        }
+        authorization = await authorization.sign(this, signer, true);
+        this.authorizations.push(authorization);
         return this;
     }
 
@@ -408,7 +377,7 @@ export class Voucher {
             return {valid: false, error: 'Authorizations are required.'};
         }
 
-        const signedAuthorizations = this.authorizations.authorizations.filter(auth => auth.signature);
+        const signedAuthorizations = this.authorizations.filter(auth => auth.signature);
         if (signedAuthorizations.length === 0) {
             return {valid: false, error: 'At least one authorization with signature is required.'};
         }
@@ -432,7 +401,7 @@ export class Voucher {
 
     isValidAtTime(currentTick) {
         if (!this.timelock) return true;
-        return currentTick >= this.timelock.startAt && currentTick <= this.timelock.endAt;
+        return currentTick >= this.timelock.startTick && currentTick <= this.timelock.endTick;
     }
 
     getTotalInput() {

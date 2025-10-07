@@ -11,7 +11,7 @@ export default function makeADR36Doc(message, publicKey){
     }
     let data = message;
     if(data.toUInt8Array){
-        data = data.toUInt8Array({excludeAuthorization: true, excludeSignatures: true});
+        data = data.toUInt8Array({excludeAuthorization: true, excludeAuthorizations: true});
     }
 
     // expect publicKey to be a hex string, throw error if not

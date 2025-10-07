@@ -8,16 +8,28 @@ import Authorization from '../Authorization/Authorization.js';
 
 describe('ClusterBlock', () => {
     it('should create a cluster block', () => {
+        const clusterBlock = new ClusterBlock({
+            cluster: 'core.banking',
+            header: {
+                proposer: 'scintilla',
+                timestamp: 1759372489596n,
+                height: 0n,
+                previousHash: null,
+            },
+        });
+        expect(clusterBlock.toHash()).toEqual('213912ec3f77053de0d730767293dd821c82d6aa0113505f8766b897efd2d7ad');
+    });
+    it('should create a cluster block', () => {
         const clusterBlock = new ClusterBlock();
         expect(clusterBlock).toBeDefined();
         
         expect(clusterBlock.header).toBeDefined();
-        expect(clusterBlock.header.timestamp).toBeGreaterThan(0);
+        expect(clusterBlock.version).toBe(1);
+        expect(clusterBlock.cluster).toBe('');
+        expect(Number(clusterBlock.header.timestamp)).toBeGreaterThan(0);
         expect(clusterBlock.header.height).toBe(0);
-        expect(clusterBlock.header.previousHash).toBeNull();
-        expect(clusterBlock.header.proposer).toBeNull();
-        expect(clusterBlock.header.cluster).toBe('');
-        expect(clusterBlock.header.version).toBe(1);
+        expect(clusterBlock.header.previousHash).toEqual(new Uint8Array(32).fill(0));
+        expect(clusterBlock.header.proposer).toBe('');
 
         expect(clusterBlock.payload).toBeDefined();
         expect(clusterBlock.payload.hashProofHashes).toEqual([]);
@@ -29,17 +41,18 @@ describe('ClusterBlock', () => {
 
     it('should consider a state action', () => {
         const clusterBlock = new ClusterBlock({
+            cluster: 'core.banking',
             header: {
                 proposer: 'scintilla',
-                timestamp: 1234567890n,
+                timestamp: 1759372489596n,
             },
         });
 
         const hashProof = new HashProof({
+            cluster: 'core.banking',
             header: {
-                cluster: '',
                 proposer: 'scintilla',
-                timestamp: 1234567890n,
+                timestamp: 1759372489596n,
             },
             payload: {
                 data: [],
@@ -48,7 +61,7 @@ describe('ClusterBlock', () => {
 
 
         const transfer = new Transfer({
-            timestamp: 1234567890n,
+            timestamp: 1759372489596n,
             cluster: 'core.banking',
             action: 'EXECUTE',
             type: 'ASSET',
@@ -81,16 +94,19 @@ describe('ClusterBlock', () => {
                 payer: 'alex',
             }],
         });
-        expect(transfer.toHash()).toEqual('58ed461f81e531304b436a0464cdd0a5cbb2500f74422a4564c8f91d9bd1a83e');
+
+        expect(transfer.toHash()).toEqual('d1ee52fb90bc9878c4f95ac02476c2bdfc234c6e83a4b1b6e2c95095ba3e547f');
         hashProof.consider(transfer);
-        expect(hashProof.toHash()).toEqual('ed0a77cb54f353e47346a0318e459d790ca08e592eeef6fc80bbce066913222e');
+        expect(hashProof.toHash()).toEqual('79169b6e9af3dd1c594e8cc1aa20041ca7a1d8b658bf61b2d705bd78f515d1d2');
 
         clusterBlock.consider(hashProof);
 
         const parsedClusterBlock = ClusterBlock.fromUint8Array(clusterBlock.toUint8Array());
+        expect(parsedClusterBlock.toHash()).toEqual('9a93c7384e9e11392166d326220b0ca1812aa49285b5e5877151492a937076d9');
+        expect(parsedClusterBlock.toHex()).toEqual('06010c636f72652e62616e6b696e673400fd7cb3c5a2990100000000000000000000000000000000000000000000000000000000000000000000097363696e74696c6c6151095b224153534554225d465b22303a37393136396236653961663364643163353934653863633161613230303431636137613164386236353862663631623264373035626437386635313564316432225d0000');
+        expect(clusterBlock.toHex()).toEqual('06010c636f72652e62616e6b696e673400fd7cb3c5a2990100000000000000000000000000000000000000000000000000000000000000000000097363696e74696c6c6151095b224153534554225d465b22303a37393136396236653961663364643163353934653863633161613230303431636137613164386236353862663631623264373035626437386635313564316432225d0000');
         expect(parsedClusterBlock.toHash()).toEqual(clusterBlock.toHash());
-        expect(parsedClusterBlock.toHash()).toEqual('a7ac8285f4e5fda6694ced1fa3084b133c0b253f79ff36290167e3f364131177');
-        expect(parsedClusterBlock.toHex()).toEqual('3b000000010000000000000000499602d2000000000000000000000000000000000000000000000000000000000000000000097363696e74696c6c6151095b224153534554225d465b22303a65643061373763623534663335336534373334366130333138653435396437393063613038653539326565656636666338306262636530363639313332323265225d5b5d');
+        expect(parsedClusterBlock.toHex()).toEqual(clusterBlock.toHex());
 
     });
     

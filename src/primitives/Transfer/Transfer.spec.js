@@ -45,11 +45,6 @@ describe('Transfer', () => {
         expect(transfer.computeHash).toBeDefined();
     });
 
-    it('should have a toBuffer method', () => {
-        const transfer = new Transfer();
-        expect(transfer.toBuffer).toBeDefined();
-    });
-
     it('should have a toHex method', () => {
         const transfer = new Transfer();
         expect(transfer.toHex).toBeDefined();
@@ -82,7 +77,7 @@ describe('Transfer.computeHash', () => {
             timestamp: 1234567890,
         });
         const result = transfer.computeHash();
-        expect(result).toBe('6d748f7e4edcfd91ae35eb755145dbb2ea5c2907febd88f669e152fa5c99e2fa');
+        expect(result).toBe('cdc36ef78bd1036b74c2d1044efb01f1b7b1bb889032d026f74c4be319ba55d5');
     });
 });
 

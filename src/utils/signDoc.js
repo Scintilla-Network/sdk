@@ -42,9 +42,9 @@ export default function signDoc(doc, hash, _options = {}){
     if(!isDocument){
         throw new Error('Document is not a valid document');
     }
-    const hashMessage = (hash !== undefined) ? hash : element.toHash('hex', {excludeSignatures: true, excludeAuthorization: true});
-    // const hashMessage = hash ?? element.toHash('hex', {excludeSignatures: true, excludeAuthorization: true});
-    const hexMessage = element.toHex({excludeSignatures: true, excludeAuthorization: true});
+    const hashMessage = (hash !== undefined) ? hash : element.toHash('hex', {excludeAuthorizations: true});
+    // const hashMessage = hash ?? element.toHash('hex', {excludeAuthorizations: true});
+    const hexMessage = element.toHex({excludeAuthorizations: true});
     const signingElement = hexMessage.length > 8192 ? hashMessage : hexMessage;
     const signingMessage = SignableMessage.fromHex(signingElement);
 

@@ -46,11 +46,12 @@ describe('Identity', () => {
         identity.setRecord('profile.age', 30);
         const store = identity.toStore();
         // expect(store).toHaveProperty(`/user/.identity.json`);
-        expect(store[`/user/.identity.json`]).toEqual('{"parent":null,"moniker":"user","members":[],"records":{"profile":{"name":"John Doe","age":30}}}');
+        expect(store[`/user/.identity.json`]).toEqual('{"kind":"IDENTITY","parent":null,"moniker":"user","members":[],"records":{"profile":{"name":"John Doe","age":30}}}');
     });
 
     it('toJSON returns the correct object', () => {
         const options = {
+            kind: 'IDENTITY',
             parent: null,
             moniker: 'testuser',
             members:[['testaddress', 0, 0, 0, 0, 0, 0]],
@@ -64,19 +65,19 @@ describe('Identity', () => {
     it('toHex returns the correct Hex', () => {
         const identity = new Identity({ moniker: 'testuser' });
         const hex = identity.toHex();
-        expect(hex).toEqual('1203736374087465737475736572027b7d025b5d');
+        expect(hex).toEqual('12084944454e5449545903736374087465737475736572027b7d025b5d');
     });
 
     it('should be able to provide a hash', () => {
         const identity = new Identity({ moniker: 'testuser' });
         const hash = identity.toHash('hex');
-        expect(hash).toEqual('de9aa5539e2b5d7f1c66f50e1f7064463ba6a1a99b733ae36c1e999d74440723');
+        expect(hash).toEqual('d2109858d36440311e5a4daf0b7a6df023ac67987b5918056185a53c506cc7b6');
     });
 
     it('toUint8Array returns the correct Uint8Array', () => {
         const identity = new Identity({ moniker: 'testuser' });
         const array = identity.toUint8Array();
-        expect(array).toEqual(uint8array.fromHex('1203736374087465737475736572027b7d025b5d'));
+        expect(array).toEqual(uint8array.fromHex('12084944454e5449545903736374087465737475736572027b7d025b5d'));
     });
 
     it('fromUint8Array returns the correct Identity', () => {

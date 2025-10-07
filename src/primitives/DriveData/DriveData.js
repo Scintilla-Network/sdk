@@ -1,13 +1,14 @@
-import { classic } from "@scintilla-network/hashes";
-const { sha256 } = classic;
-import { utils } from '@scintilla-network/keys';
-const { uint8array, varint } = utils;
-const { decodeVarInt, encodeVarInt } = varint;
+import { sha256 } from "@scintilla-network/hashes/classic";
+import { uint8array, varint } from '@scintilla-network/keys/utils';
 
 class DriveData {
     constructor(options = {}) {
         this.type = options.type || 'text';
         this.content = options.content || '';
+    }
+
+    static fromJSON(json) {
+        return new DriveData(json);
     }
 
     toJSON() {
@@ -19,10 +20,10 @@ class DriveData {
 
     toUint8Array() {
         const typeUint8Array = this.type ? uint8array.fromString(this.type) : new Uint8Array(0);
-        const varIntType = encodeVarInt(typeUint8Array.length);
+        const varIntType = varint.encodeVarInt(typeUint8Array.length);
 
         const contentUint8Array = this.content ? uint8array.fromString(this.content) : new Uint8Array(0);
-        const varIntContent = encodeVarInt(contentUint8Array.length);
+        const varIntContent = varint.encodeVarInt(contentUint8Array.length);
 
         const totalLength = varIntType.length + typeUint8Array.length + varIntContent.length + contentUint8Array.length;
         const result = new Uint8Array(totalLength);
@@ -50,7 +51,7 @@ class DriveData {
     static fromUint8Array(uint8Array) {
         try {
             let offset = 0;
-            const { value: _typeLength, length: _varIntTypeLength } = decodeVarInt(uint8Array);
+            const { value: _typeLength, length: _varIntTypeLength } = varint.decodeVarInt(uint8Array);
             const typeLength = Number(_typeLength);
             const varIntTypeLength = _varIntTypeLength;
             offset += varIntTypeLength;
@@ -59,7 +60,7 @@ class DriveData {
             const type = uint8array.toString(typeUint8Array);
             offset += typeLength;
 
-            const { value: _contentLength, length: varIntContentLength } = decodeVarInt(uint8Array.slice(offset));
+            const { value: _contentLength, length: varIntContentLength } = varint.decodeVarInt(uint8Array.slice(offset));
             const contentLength = Number(_contentLength);
             offset += varIntContentLength;
             
@@ -82,10 +83,6 @@ class DriveData {
 
     toString() {
         return this.toHex();
-    }
-
-    static fromJSON(json) {
-        return new DriveData(json);
     }
 }
 
