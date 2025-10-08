@@ -1,6 +1,6 @@
 {
   "name": "@scintilla-network/sdk",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A TypeScript SDK for Node.js and Web Browsers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -92,7 +92,7 @@
   },
   "dependencies": {
     "@scintilla-network/hashes": "1.3.1",
-    "@scintilla-network/keys": "1.0.0-beta.26",
+    "@scintilla-network/keys": "1.0.0",
     "@truestamp/tree": "2.1.0",
     "hermodlog": "1.6.0"
   }
