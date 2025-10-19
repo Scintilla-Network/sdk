@@ -3,6 +3,7 @@ import { sha256 } from "@scintilla-network/hashes/classic";
 import { CHAIN_SCINTILLA_1_MAGIC } from "../../../CONSTANTS.js";
 import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { kindToConstructor } from "../../../utils/kindToConstructor.js";
+import { SignableMessage } from "@scintilla-network/keys";
 
 function estimateLength(payload) {
     return payload.length;
@@ -21,8 +22,6 @@ export class NetMessage {
 
     constructor(props = {}) {
         this.chain = props.chain || CHAIN_SCINTILLA_1_MAGIC;
-        this.version = props.version || 1;
-
         if (!(this.chain instanceof Uint8Array)) {
             throw new Error("Chain magic number must be a Uint8Array");
         }
@@ -32,12 +31,16 @@ export class NetMessage {
             this.kind = 'UNKNOWN';
         }
 
+        this.version = props.version || 1;
+
         this.cluster = props.cluster || 'unknown';
 
         this.payload = null;
         this.length = 0;
 
         this.setPayload(props.payload || null);
+
+        this.signature = props.signature || null;
     }
 
     static fromUint8Array(array) {
@@ -87,12 +90,17 @@ export class NetMessage {
         }
 
         const kindString = Object.keys(NET_KINDS).find(key => NET_KINDS[key] === kindValue) || 'UNKNOWN';
+
+        const signature = array.slice(offset, offset + 64);
+        offset += 64;
+
         return new NetMessage({
             version: version,
             chain: chainMagic,
             kind: kindString,
             payload,
-            cluster
+            cluster,
+            signature
         }); 
     }
 
@@ -122,17 +130,29 @@ export class NetMessage {
         this.length = estimateLength(this.payload || new Uint8Array(0));
     }
 
-    toHex() {
-        return uint8array.toHex(this.toUint8Array());
+    async sign(signer) {
+        try {
+            const signingMessage = new SignableMessage(this.toUint8Array());
+            const [signature] = signingMessage.sign(signer);
+            this.signature = signature;
+        } catch (error) {
+            throw error;
+        }
+        return this.signature;
+        
     }
 
-    toUint8Array() {
-        const chainMagicNumberUint8Array = this.chain;
+    toHex(excludeSignature = false) {
+        return uint8array.toHex(this.toUint8Array(excludeSignature));
+    }
 
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');   
+    toUint8Array(excludeSignature = false) {
+        const chainMagicNumberUint8Array = this.chain;
 
         const kindValue = NET_KINDS[this.kind] || NET_KINDS.UNKNOWN;
         const kindUint8Array = varint.encodeVarInt(kindValue, 'uint8array');
+
+        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');   
 
         const clusterUint8Array = uint8array.fromString(this.cluster);
         const clusterLengthUint8Array = varint.encodeVarInt(clusterUint8Array.length, 'uint8array');
@@ -142,7 +162,9 @@ export class NetMessage {
 
         const payloadLengthUint8Array = varint.encodeVarInt(payloadUint8Array.length, 'uint8array');
 
-        const totalLength = chainMagicNumberUint8Array.length + versionUint8Array.length + kindUint8Array.length + clusterLengthUint8Array.length + clusterUint8Array.length + checksumUint8Array.length + payloadLengthUint8Array.length + payloadUint8Array.length;
+        const signatureUint8Array = excludeSignature ? new Uint8Array(0) : this.signature ? this.signature : new Uint8Array(0);
+
+        const totalLength = chainMagicNumberUint8Array.length + versionUint8Array.length + kindUint8Array.length + clusterLengthUint8Array.length + clusterUint8Array.length + checksumUint8Array.length + payloadLengthUint8Array.length + payloadUint8Array.length + signatureUint8Array.length;
         const result = new Uint8Array(totalLength);
         let offset = 0;
         
@@ -153,7 +175,8 @@ export class NetMessage {
         result.set(clusterUint8Array, offset); offset += clusterUint8Array.length;
         result.set(checksumUint8Array, offset); offset += checksumUint8Array.length;
         result.set(payloadLengthUint8Array, offset); offset += payloadLengthUint8Array.length;
-        result.set(payloadUint8Array, offset);
+        result.set(payloadUint8Array, offset); offset += payloadUint8Array.length;
+        result.set(signatureUint8Array, offset); offset += signatureUint8Array.length;
 
         return result;
     }
@@ -161,6 +184,11 @@ export class NetMessage {
     toHash() {
         const hash = sha256(this.toUint8Array());
         return uint8array.toHex(hash);
+    }
+
+    verifySignature(publicKey) {
+        const signingMessage = new SignableMessage(this.toUint8Array(true));
+        return signingMessage.verify(this.signature, publicKey);
     }
 }
 
