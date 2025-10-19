@@ -83,6 +83,19 @@ Some technical utilities are designed for specific data handling and management 
 - [TimeQueue](./src/utilities/timeQueue/README.md)
 - [TimeLock](./src/utilities/timeLock/README.md)
 
+#### Trees
+
+MerkleTree and PatriciaTree are exported from @scintilla-network/trees for convenience.
+
+```js
+import { Trees } from '@scintilla-network/sdk';
+const merkleTree = new Trees.MerkleTree();
+const patriciaTree = new Trees.PatriciaTree();
+console.log(Trees.HASH_ALGORITHMS);
+```
+
+Merkle Tree are used to generate merkle root and proofs for a given data (i.e: HashProof, ClusterBlock, RelayBlock, etc.).  
+
 ## Network kind
 
 Each packet starts with a kind:

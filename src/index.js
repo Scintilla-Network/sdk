@@ -41,6 +41,9 @@ export { default as utils } from './utils/index.js'
 // NET_KINDS
 export * from './primitives/messages/NetMessage/NET_KINDS.js'
 
+// Export @scintilla-network/trees for convenience
+export * as Trees from '@scintilla-network/trees'
+
 
 
 
