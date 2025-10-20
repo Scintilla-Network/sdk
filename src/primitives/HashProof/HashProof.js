@@ -1,14 +1,13 @@
+import { uint8array, varint } from '@scintilla-network/keys/utils';
+import { sha256 } from '@scintilla-network/hashes/classic';
+
 import HashProofHeader from "./HashProofHeader.js";
 import HashProofPayload from "./HashProofPayload.js";
-import { sha256 } from '@scintilla-network/hashes/classic';
-// @ts-ignore
-import {Tree} from "@truestamp/tree";
-import getTargetHash from "../../utils/getTargetHash.js";
-import signDoc from "../../utils/signDoc.js";
+
 import makeDoc from "../../utils/makeDoc.js";
-import { uint8array, varint, json, varbigint } from '@scintilla-network/keys/utils';
-import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
+import getTargetHash from "../../utils/getTargetHash.js";
 import { Authorization } from '../Authorization/Authorization.js';
+import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
 class HashProof {
     constructor(options = {}) {
@@ -64,17 +63,7 @@ class HashProof {
     }
 
     static generateMerkleRoot(data, encoding = 'hex') {
-        const hashes = data.map((el) => uint8array.fromHex(el.toHash()));
-        const tree = new Tree(hashes, 'sha256', {requireBalanced: false, debug: false});
-        const root = tree.root();
-        const proofs = data.map((el) => {
-            return {
-                hash: el.toHash('hex'),
-                proof: tree.proofObject(uint8array.fromHex(el.toHash('hex')))
-            }
-        });
-
-        return {hash: uint8array.toHex(new Uint8Array(root)), proofs};
+        return HashProofPayload.generateMerkleRoot(data, encoding);
     }
     
     async consider(element) {
@@ -130,10 +119,10 @@ class HashProof {
         return uint8array.toHex(this.toUint8Array());
     }
 
-    toHash(encoding = 'hex') {
+    toHash(encoding = 'uint8array') {
         const array = this.toUint8Array();
         const hashUint8Array = sha256(array);
-        return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     toJSON() {

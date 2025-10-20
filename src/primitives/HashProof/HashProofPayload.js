@@ -1,13 +1,14 @@
-import Transition from "../Transition/Transition.js";
-import Transfer from "../Transfer/Transfer.js";
-import Transaction from "../Transaction/Transaction.js";
-import { Voucher } from "../Voucher/Voucher.js";
-import GovernanceProposal from "../GovernanceProposal/GovernanceProposal.js";
-import GovernanceVote from "../GovernanceVote/GovernanceVote.js";
-// @ts-ignore
-import {Tree} from "@truestamp/tree";
-import { MerkleTree } from "@scintilla-network/trees";
+
 import { uint8array, varint } from '@scintilla-network/keys/utils';
+import { MerkleTree } from "@scintilla-network/trees";
+
+import Transfer from "../Transfer/Transfer.js";
+import { Voucher } from "../Voucher/Voucher.js";
+import Transition from "../Transition/Transition.js";
+import Transaction from "../Transaction/Transaction.js";
+import GovernanceVote from "../GovernanceVote/GovernanceVote.js";
+import GovernanceProposal from "../GovernanceProposal/GovernanceProposal.js";
+
 import { NET_KINDS } from '../messages/NetMessage/NET_KINDS.js';
 import { NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
@@ -305,6 +306,15 @@ class HashProofPayload {
         return { valid: true };
     }
 
+    static generateMerkleRoot(data, encoding = 'uint8array') {
+        if (!data || data.length === 0) {
+            return null;
+        }
+        const hashes = data.map((element) => element.toHash());
+        const tree = new MerkleTree(hashes, 'sha256');
+        const root = tree.root(encoding);
+        return {root};
+    }
     /**
      * Computes the merkle root for the payload data
      */
@@ -314,13 +324,7 @@ class HashProofPayload {
         }
 
         try {
-            let hashes;
-            console.log(this.data);
-            hashes = this.data.map((element) => element.toHash());
-            console.log({hashes});
-            const tree = new MerkleTree(hashes, 'sha256', {requireBalanced: false, debug: false});
-            const root = tree.root(encoding);
-            return {hash: root};
+            return {root: HashProofPayload.generateMerkleRoot(this.data, encoding).root};
         } catch (error) {
             return null;
         }
@@ -351,15 +355,16 @@ class HashProofPayload {
                 hashes = this.originalHashes.map(hash => uint8array.fromHex(hash));
             } else {
                 // Fallback to computing hashes from current elements
-                hashes = this.data.map((element) => uint8array.fromHex(element.toHash()));
+                hashes = this.data.map((element) => element.toHash('uint8array'));
             }
 
-            const tree = new Tree(hashes, 'sha256', {requireBalanced: false, debug: false});
+            const tree = new MerkleTree(hashes, 'sha256');
             const root = tree.root();
-            const computedHash = uint8array.toHex(new Uint8Array(root));
+            const computedHash = uint8array.toHex(root);
+            const expectedRootHash = (expectedRoot instanceof Uint8Array) ? uint8array.toHex(expectedRoot) : expectedRoot;
 
-            if (computedHash !== expectedRoot) {
-                return { valid: false, error: `Merkle root mismatch: computed merkle root does not match expected root ${computedHash} !== ${expectedRoot}` };
+            if (computedHash !== expectedRootHash) {
+                return { valid: false, error: `Merkle root mismatch: computed merkle root does not match expected root ${computedHash} !== ${expectedRootHash}` };
             }
 
             return { valid: true };
