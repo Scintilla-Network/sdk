@@ -181,9 +181,10 @@ export class NetMessage {
         return result;
     }
 
-    toHash() {
-        const hash = sha256(this.toUint8Array());
-        return uint8array.toHex(hash);
+    toHash(encoding = 'uint8array') {
+        const uint8Array = this.toUint8Array();
+        const hashUint8Array = sha256(uint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     verifySignature(publicKey) {

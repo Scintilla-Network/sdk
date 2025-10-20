@@ -65,10 +65,10 @@ export class RelayBlockHeader {
         return result;
     }
 
-    toHash() {
+    toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hash = sha256(uint8Array);
-        return uint8array.toHex(hash);
+        return encoding === 'uint8array' ? hash : uint8array.toHex(hash);
     }
 
     static fromUint8Array(inputArray) {

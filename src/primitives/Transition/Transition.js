@@ -223,10 +223,10 @@ export class Transition {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
-    toHash(encoding = 'hex', {excludeAuthorizations = false} = {}) {
-        const uint8Array = this.toUint8Array({ excludeAuthorizations });
+    toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
+        const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
-        return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : uint8array.toString(hashUint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     toJSON({excludeAuthorizations = false} = {}) {

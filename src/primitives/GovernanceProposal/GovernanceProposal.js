@@ -317,10 +317,10 @@ class GovernanceProposal {
         return uint8array.toHex(hashUint8Array);
     }
 
-    toHash(encoding = 'hex') {
+    toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);
-        return encoding === 'hex' ? uint8array.toHex(hashUint8Array) : hashUint8Array;
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     addAuthorization(authorization) {

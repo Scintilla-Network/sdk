@@ -75,8 +75,8 @@ class StateAction {
         return this.element?.toHex();
     }
 
-    toHash() {
-        return this.element?.toHash();
+    toHash(encoding = 'uint8array') {
+        return this.element?.toHash(encoding);
     }
 }
 

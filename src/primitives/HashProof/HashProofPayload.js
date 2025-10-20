@@ -6,6 +6,7 @@ import GovernanceProposal from "../GovernanceProposal/GovernanceProposal.js";
 import GovernanceVote from "../GovernanceVote/GovernanceVote.js";
 // @ts-ignore
 import {Tree} from "@truestamp/tree";
+import { MerkleTree } from "@scintilla-network/trees";
 import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { NET_KINDS } from '../messages/NetMessage/NET_KINDS.js';
 import { NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
@@ -203,8 +204,10 @@ class HashProofPayload {
         return result;
     }
 
-    toHash() {
-        return uint8array.toHex(this.toUint8Array());
+    toHash(encoding = 'uint8array') {
+        const uint8Array = this.toUint8Array();
+        const hashUint8Array = sha256(uint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     toJSON() {
@@ -305,33 +308,19 @@ class HashProofPayload {
     /**
      * Computes the merkle root for the payload data
      */
-    computeMerkleRoot(encoding = 'hex') {
+    computeMerkleRoot(encoding = 'uint8array') {
         if (!this.data || this.data.length === 0) {
             return null;
         }
 
         try {
             let hashes;
-            
-            if (this.originalHashes && this.originalHashes.length === this.data.length) {
-                // Use stored original hashes to avoid issues with element transformation
-                hashes = this.originalHashes.map(hash => uint8array.fromHex(hash));
-            } else {
-                // Fallback to computing hashes from current elements
-                hashes = this.data.map((element) => uint8array.fromHex(element.toHash()));
-            }
-            
-            const tree = new Tree(hashes, 'sha256', {requireBalanced: false, debug: false});
-            const root = tree.root();
-            
-            const proofs = hashes.map((hash) => {
-                return {
-                    hash: hash.toString('hex'),
-                    proof: tree.proofObject(hash)
-                }
-            });
-
-            return {hash: uint8array.toHex(new Uint8Array(root)), proofs};
+            console.log(this.data);
+            hashes = this.data.map((element) => element.toHash());
+            console.log({hashes});
+            const tree = new MerkleTree(hashes, 'sha256', {requireBalanced: false, debug: false});
+            const root = tree.root(encoding);
+            return {hash: root};
         } catch (error) {
             return null;
         }

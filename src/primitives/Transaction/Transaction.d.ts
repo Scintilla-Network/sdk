@@ -24,7 +24,7 @@ export declare class Transaction {
     static fromBuffer(buffer: Buffer): Transaction;
     toHex(options?: { excludeAuthorization?: boolean }): string;
     toUint8Array(options?: { excludeAuthorization?: boolean }): Uint8Array;
-    toHash(encoding?: BufferEncoding, options?: { excludeAuthorization?: boolean }): string;
+    toHash(encoding?: 'hex' | 'uint8array', options?: { excludeAuthorization?: boolean }): string;
     toJSON(options?: { excludeAuthorization?: boolean }): object;
     addAuthorization(authorization: ITransactionAuthorization): void;
     verifySignature(): boolean;

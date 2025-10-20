@@ -252,13 +252,10 @@ export class Authorization {
     /**
      * Compute hash of the authorization
      */
-    toHash(encoding = 'hex') {
-        const jsonData = this.toJSON();
-        const stringified = json.sortedJsonByKeyStringify(jsonData);
-        const dataUint8Array = uint8array.fromString(stringified);
-        const hash = sha256(dataUint8Array);
-        
-        return encoding === 'hex' ? uint8array.toHex(hash) : hash;
+    toHash(encoding = 'uint8array') {
+        const uint8Array = this.toUint8Array();
+        const hashUint8Array = sha256(uint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     /**

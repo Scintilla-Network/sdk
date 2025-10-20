@@ -223,15 +223,12 @@ class QuorumDecisionVote {
      * @param {boolean} [excludeAuthorizations = false] - Whether to exclude authorizations from the hash.
      * @returns {string|Uint8Array} The hash of the instance.
      */
-    toHash(encoding = 'hex', { excludeAuthorizations = true } = {}) {
-        const buffer = this.toUint8Array({ excludeAuthorizations });
-        const quorumDecisionHash = sha256(buffer);
-
-        if (encoding === 'hex') {
-            return uint8array.toHex(quorumDecisionHash);
-        }
-        return quorumDecisionHash;
+    toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
+        const uint8Array = this.toUint8Array({excludeAuthorizations});
+        const hashUint8Array = sha256(uint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
+    
     /**
      * Signs the QuorumDecisionVote instance using the provided signer.
      * @param {Object} signer - The signer object, expected to have a signMessageWithSecp256k1 method.

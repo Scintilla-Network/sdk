@@ -26,19 +26,19 @@ describe('Authorization', () => {
 
         const bytes = auth.toUint8Array();
         const hex = auth.toHex();
-        const hash = auth.toHash();
+        const hash = auth.toHash('hex');
 
         const parsedFromBytes = Authorization.fromUint8Array(bytes);
-        expect(parsedFromBytes.toHash()).toBe(hash);
+        expect(parsedFromBytes.toHash('hex')).toBe(hash);
         expect(parsedFromBytes.toHex()).toBe(hex);
 
         const parsedFromHex = Authorization.fromHex(hex);
-        expect(parsedFromHex.toHash()).toBe(hash);
+        expect(parsedFromHex.toHash('hex')).toBe(hash);
         expect(parsedFromHex.toHex()).toBe(hex);
         
         const json = auth.toJSON();
         const parsedFromJson = Authorization.fromJSON(json);
-        expect(parsedFromJson.toHash()).toBe(hash);
+        expect(parsedFromJson.toHash('hex')).toBe(hash);
         expect(parsedFromJson.toHex()).toBe(hex);
         
         expect(parsedFromBytes.equals(parsedFromHex)).toBe(true);

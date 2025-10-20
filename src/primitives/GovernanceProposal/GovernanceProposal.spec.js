@@ -1,4 +1,3 @@
-// import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
 import GovernanceProposal from './GovernanceProposal.js';
 
@@ -80,10 +79,10 @@ describe('GovernanceProposal', () => {
             }],
         });
         const parsedProposal = GovernanceProposal.fromUint8Array(proposal.toUint8Array());
-        expect(parsedProposal.toHash()).toEqual(proposal.toHash());
+        expect(parsedProposal.toHash('hex')).toEqual(proposal.toHash('hex'));
         expect(parsedProposal.toHex()).toEqual(proposal.toHex());
         expect(parsedProposal.toJSON()).toEqual(proposal.toJSON());
         expect(parsedProposal.toUint8Array()).toEqual(proposal.toUint8Array());
-        expect(parsedProposal.toHash()).toEqual('3eaebbdc06109816a0b0e70a823bd8c3a5ce550fb55ebb8ad5b0f2a49e8f8c83');
+        expect(parsedProposal.toHash('hex')).toEqual('3eaebbdc06109816a0b0e70a823bd8c3a5ce550fb55ebb8ad5b0f2a49e8f8c83');
     });
 });

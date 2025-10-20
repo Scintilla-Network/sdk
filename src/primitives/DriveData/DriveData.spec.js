@@ -38,7 +38,7 @@ describe('DriveData', () => {
     });
 
     it('generates a hash correctly', () => {
-        const hash = driveData.toHash();
+        const hash = driveData.toHash('hex');
         expect(hash).toBeDefined();
         expect(hash).toBe('87ffcf81e64343908cc0a5db9961f25295ee994aa8706256e25de7858924f4d6');
     });

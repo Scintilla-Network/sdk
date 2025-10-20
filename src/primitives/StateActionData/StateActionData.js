@@ -369,9 +369,10 @@ class StateActionData {
         return this.toUint8Array().length;
     }
 
-    toHash(encoding = 'hex') {
-        const hashArray = sha256(this.toUint8Array());
-        return encoding === 'hex' ? uint8array.toHex(hashArray) : hashArray;
+    toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
+        const uint8Array = this.toUint8Array({excludeAuthorizations});
+        const hashUint8Array = sha256(uint8Array);
+        return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
     toHex() {

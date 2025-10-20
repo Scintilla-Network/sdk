@@ -39,30 +39,30 @@ describe('GovernanceVote', () => {
 
     it('generates a consistent hash', () => {
         const proposalVote = new GovernanceVote(voteOptions);
-        const hash = proposalVote.toHash();
+        const hash = proposalVote.toHash('hex');
 
         expect(hash).toBeTruthy();
         expect(typeof hash).toBe('string');
         expect(hash.length).toBeGreaterThan(0);
     });
 
-    it('converts to a Buffer correctly', () => {
+    it('converts to a Uint8Array correctly', () => {
         const proposalVote = new GovernanceVote(voteOptions);
-        const buffer = proposalVote.toBuffer();
+        const array = proposalVote.toUint8Array();
 
-        expect(buffer).toBeInstanceOf(Uint8Array);
-        expect(buffer.length).toBeGreaterThan(0);
+        expect(array).toBeInstanceOf(Uint8Array);
+        expect(array.length).toBeGreaterThan(0);
     });
 
     it('converts to a Uint8Array correctly', () => {
         const proposalVote = new GovernanceVote(voteOptions);
         const uint8Array = proposalVote.toUint8Array();
         const parsedProposalVote = GovernanceVote.fromUint8Array(uint8Array);
-        expect(parsedProposalVote.toHash()).toEqual(proposalVote.toHash());
+        expect(parsedProposalVote.toHash('hex')).toEqual(proposalVote.toHash('hex'));
         expect(parsedProposalVote.toHex()).toEqual(proposalVote.toHex());
         expect(parsedProposalVote.toJSON()).toEqual(proposalVote.toJSON());
         expect(parsedProposalVote.toUint8Array()).toEqual(proposalVote.toUint8Array());
-        expect(parsedProposalVote.toHash()).toEqual('433851952352cd543678fe7c3ac5de9c3ee8ff51050a6f145b61bf551d505a87');
+        expect(parsedProposalVote.toHash('hex')).toEqual('433851952352cd543678fe7c3ac5de9c3ee8ff51050a6f145b61bf551d505a87');
     });
     
     
