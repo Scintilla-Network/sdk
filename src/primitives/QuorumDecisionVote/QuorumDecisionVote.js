@@ -267,7 +267,7 @@ class QuorumDecisionVote {
      * @throws Will throw an error if verification fails.
      */
     verifyAuthorizations() {
-        return this.authorizations.every(auth => auth.verify(this));
+        return this.authorizations.every(auth => auth.verify(this).valid);
     }
    
 

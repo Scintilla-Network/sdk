@@ -341,7 +341,7 @@ export class Voucher {
     }
 
     verifyAuthorizations() {
-        return this.authorizations.every(auth => auth.verify(this));
+        return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
     toBase64() {

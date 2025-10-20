@@ -160,12 +160,14 @@ class QuorumDecision {
      */
     toJSON({ excludeAuthorizations = false } = {}) {
         const obj = {
+            kind: this.kind,
+            version: this.version,
+            timestamp: this.timestamp,
             action: this.action,
             proposer: this.proposer,
             cluster: this.cluster,
             quorum: this.quorum,
             payload: this.payload,
-            timestamp: this.timestamp,
         };
 
         if (!excludeAuthorizations) {
@@ -232,7 +234,7 @@ class QuorumDecision {
      * @throws Will throw an error if verification fails.
      */
     verifyAuthorizations() {
-        return this.authorizations.every(auth => auth.verify(this));
+        return this.authorizations.every(auth => auth.verify(this).valid);
     }
     /**
     * Adds a signature to the signatures array.
