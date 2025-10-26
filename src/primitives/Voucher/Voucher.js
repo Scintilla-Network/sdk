@@ -328,6 +328,9 @@ export class Voucher {
         if(authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
         }
+        if(!authorization.verify){
+            authorization = new Authorization(authorization);
+        }
         this.authorizations.push(authorization);
     }
 
