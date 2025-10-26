@@ -4,12 +4,19 @@ import { sha256 } from '@scintilla-network/hashes/classic';
 import HashProofHeader from "./HashProofHeader.js";
 import HashProofPayload from "./HashProofPayload.js";
 
-import makeDoc from "../../utils/makeDoc.js";
 import getTargetHash from "../../utils/getTargetHash.js";
 import { Authorization } from '../Authorization/Authorization.js';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
 class HashProof {
+    /**
+     * Create HashProof
+     * @param {Object} options - The options
+     * @param {string} options.cluster - The cluster
+     * @param {Object} options.header - The header
+     * @param {Object} options.payload - The payload
+     * @returns {HashProof} The HashProof instance
+     */
     constructor(options = {}) {
         this.kind = 'HASHPROOF';
         this.version = 1;
@@ -19,6 +26,11 @@ class HashProof {
     }
 
 
+    /**
+     * Create HashProof from Uint8Array
+     * @param {Uint8Array} inputArray - The input array
+     * @returns {HashProof} The HashProof instance
+     */
     static fromUint8Array(inputArray) {
         const hashProofProps = {};
         let offset = 0;
@@ -57,15 +69,30 @@ class HashProof {
         return new HashProof({cluster, header: header.toJSON(), payload: payload.toJSON()});
     }
 
+    /**
+     * Create HashProof from hex
+     * @param {string} hex - The hex string
+     * @returns {HashProof} The HashProof instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return HashProof.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Generate Merkle root
+     * @param {any[]} data - The data
+     * @param {string} encoding - The encoding
+     * @returns {Object} The Merkle root
+     */
     static generateMerkleRoot(data, encoding = 'hex') {
         return HashProofPayload.generateMerkleRoot(data, encoding);
     }
     
+    /**
+     * Consider an element
+     * @param {Object} element - The element
+     */
     async consider(element) {
         if (!element || !element.type) {
             console.error('HashProof tried to consider an undefined or invalid element.');
@@ -76,6 +103,12 @@ class HashProof {
         this.header.merkleRoot = HashProof.generateMerkleRoot(this.payload.data, 'hex').hash;
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -115,16 +148,29 @@ class HashProof {
         return result;
     }
 
+    /**
+     * Convert to hex
+     * @returns {string} The hex string
+     */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const array = this.toUint8Array();
         const hashUint8Array = sha256(array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             cluster: this.cluster,
@@ -133,6 +179,11 @@ class HashProof {
         };
     }
 
+    /**
+     * Check nonce
+     * @param {bigint} nonce - The nonce
+     * @returns {Object} The nonce check result
+     */
     checkNonce(nonce) {
         const targetHash = getTargetHash(this.header.difficulty);
         const clone = new HashProof({...this});
@@ -141,15 +192,20 @@ class HashProof {
         return [hash < targetHash, clone];
     }
 
-    toDoc(signer) {
-        return makeDoc(this, signer);
-    }
-
+    /**
+     * Sign the HashProof
+     * @param {Wallet} signer - The signer
+     * @returns {Promise<HashProof>} The signed HashProof
+     */
     async sign(signer) {
         const auth = new Authorization();
-        return await auth.sign(this, signer);
+        return auth.sign(this, signer);
     }
 
+    /**
+     * Validate the HashProof
+     * @returns {Object} The validation result
+     */
     isValid() {
         // Header validation
         const headerValidation = this.header.isValid();

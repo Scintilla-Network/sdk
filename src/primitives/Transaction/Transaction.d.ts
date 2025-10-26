@@ -2,7 +2,7 @@
 import { ITransactionOptions } from './interfaces/ITransactionOptions.js';
 import {ITransactionAuthorization} from "./interfaces/ITransactionAuthorization.js";
 import {ITransactionFee} from "./interfaces/ITransactionFee.js";
-import { ITimelock } from "../TimeLock/interfaces/ITimeLock.js";
+import { ITimelock } from "../../../types/TimeLock/interfaces/ITimeLock.js";
 
 export declare class Transaction {
     version: number;

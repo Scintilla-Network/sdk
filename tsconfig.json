@@ -26,5 +26,5 @@
     "resolveJsonModule": true,
     "moduleResolution": "Bundler"
   },
-  "include": ["src"]
+  "include": ["src", "types/TimeLock"]
 }

@@ -2,7 +2,7 @@ import {ITransferOptions} from "./interfaces/ITransferOptions.js";
 import {ITransferAuthorization} from "./interfaces/ITransferAuthorization.js";
 import {ITransferFee} from "./interfaces/ITransferFee.js";
 import {ITransactionAuthorization} from "../Transaction/interfaces/ITransactionAuthorization.js";
-import { ITimelock } from '../TimeLock/interfaces/ITimeLock.js';
+import { ITimelock } from '../../../types/TimeLock/interfaces/ITimeLock.js';
 
 export declare class Transfer {
     version: number;

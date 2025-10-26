@@ -1,9 +1,8 @@
-import { sha256 } from '@scintilla-network/hashes/classic';
+import { serialize, deserialize } from '@scintilla-network/serialize';
 import { uint8array, varint } from '@scintilla-network/keys/utils';
+import { sha256 } from '@scintilla-network/hashes/classic';
+import { MerkleTree } from "@scintilla-network/trees";
 
-import { serialize } from '../../utils/serialize/index.js';
-// import { deserialize } from '../../utils/deserialize/index.js';
-import deserialize from '../../utils/deserialize/index.js';
 import { kindToConstructor } from '../../utils/kindToConstructor.js';
 
 
@@ -23,17 +22,33 @@ function loadActions(actions) {
 }
 
 export class RelayBlockPayload {
+    /**
+     * Create RelayBlockPayload
+     * @param {Object} options - The options
+     * @param {Object[]} options.actions - The actions
+     * @param {Object[]} options.clusters - The clusters
+     */
     constructor(options = {}) {
         this.actions = loadActions(options.actions || []);
         this.clusters = options.clusters || [];
     }
 
+    /**
+     * Create RelayBlockPayload from JSON
+     * @param {Object} json - The JSON object
+     * @returns {RelayBlockPayload} The RelayBlockPayload instance
+     */
     static fromJSON(json) {
         return new RelayBlockPayload({
             ...json,
         });
     }
 
+    /**
+     * Create RelayBlockPayload from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {RelayBlockPayload} The RelayBlockPayload instance
+     */
     static fromUint8Array(inputArray) {
         const payloadProps = {};
         let offset = 0;
@@ -41,88 +56,75 @@ export class RelayBlockPayload {
           // Actions
           const {value: actionsTotalLength, length: actionsTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
           offset += actionsTotalLengthBytes;
-          const actions = deserialize.toArray(inputArray.subarray(offset));
+          const actions = deserialize.toObject(inputArray.subarray(offset), kindToConstructor);
           payloadProps.actions = actions.value;
           offset += actionsTotalLength;
   
           // Clusters
           const {value: clustersTotalLength, length: clustersTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
           offset += clustersTotalLengthBytes;
-          const clusters = deserialize.toArray(inputArray.subarray(offset));
+          const clusters = deserialize.toObject(inputArray.subarray(offset), kindToConstructor);
           payloadProps.clusters = clusters.value;
           offset += clustersTotalLength;
 
-
-        // const { value: actionsLength, length: actionsLengthBytes } = varint.decodeVarInt(inputArray.slice(offset));
-        // offset += actionsLengthBytes;
-
-
-        // payloadProps.actions = [];
-        // for (let i = 0; i < actionsLength; i++) {
-        //     const { value: actionLength, length: actionLengthBytes } = varint.decodeVarInt(inputArray.slice(offset));
-        //     offset += actionLengthBytes;
-        //     const actionKind = inputArray[offset];
-        //     // offset += 1;
-        //     switch (actionKind) {
-        //         case NET_KINDS['TRANSFER']:
-        //             const transfer = Transfer.fromUint8Array(inputArray.slice(offset, offset + actionLength));
-        //             offset += transfer.toUint8Array().length;
-        //             payloadProps.actions.push(transfer);
-        //             break;
-        //         case NET_KINDS['VOUCHER']:
-        //             const voucher = Voucher.fromUint8Array(inputArray.slice(offset, offset + actionLength));
-        //             offset += voucher.toUint8Array().length;
-        //             payloadProps.actions.push(voucher);
-        //             break;  
-        //         case NET_KINDS['TRANSACTION']:
-        //             const transaction = Transaction.fromUint8Array(inputArray.slice(offset, offset + actionLength));
-        //             offset += transaction.toUint8Array().length;
-        //             payloadProps.actions.push(transaction);
-        //             break;
-        //         case NET_KINDS['TRANSITION']:
-        //             const transition = Transition.fromUint8Array(inputArray.slice(offset, offset + actionLength));
-        //             offset += transition.toUint8Array().length;
-        //             payloadProps.actions.push(transition);
-        //             break;
-        //         default:
-        //             throw new Error(`Unknown action kind: ${actionKind}`);  
-        //     }
-        // }
-
-        // Data
-        // const {value: dataTotalLength, length: dataTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
-        // offset += dataTotalLengthBytes;
-        // payloadProps.actions = StateActionData.fromUint8Array(inputArray.subarray(offset, offset + dataTotalLength));
-        // offset += dataTotalLength;
-
-
-        // payloadProps.clusters = [];
-        // const { value: clustersLength, length: clustersLengthBytes } = varint.decodeVarInt(inputArray.slice(offset));
-        // for (let i = 0; i < clustersLength; i++) {
-        //     offset += clustersLengthBytes;
-        //     const { value: clusterMonikerLength, length: clusterMonikerLengthBytes } = varint.decodeVarInt(inputArray.slice(offset));
-        //     offset += clusterMonikerLengthBytes;
-        //     const clusterMoniker = uint8array.toString(inputArray.slice(offset, offset + clusterMonikerLength));
-        //     offset += clusterMonikerLength;
-        //     const { value: clusterHashLength, length: clusterHashLengthBytes } = varint.decodeVarInt(inputArray.slice(offset));
-        //     offset += clusterHashLengthBytes;
-        //     const clusterHash = uint8array.toHex(inputArray.slice(offset, offset + clusterHashLength));
-        //     offset += clusterHashLength;
-        //     const cluster = [clusterMoniker, clusterHash];
-        //     payloadProps.clusters.push(cluster);
-        // }   
-
         return new RelayBlockPayload(payloadProps); 
-       
     }
 
+    /**
+     * Hash a cluster
+     * @param {Object} cluster - The cluster
+     * @returns {Uint8Array} The hash
+     */
+    static hashCluster(cluster) {
+        if (!Array.isArray(cluster) || cluster.length !== 2) {
+            throw new Error('Invalid cluster format: expected [clusterName, clusterHash]');
+        }
+        const [clusterName, clusterHash] = cluster;
+        // Serialize clusterName (string) and clusterHash (hex string) to Uint8Array
+        const nameBytes = serialize.fromString(clusterName).value;
+        const hashBytes = uint8array.fromHex(clusterHash);
+        // Concatenate and hash
+        const combined = new Uint8Array(nameBytes.length + hashBytes.length);
+        combined.set(nameBytes, 0);
+        combined.set(hashBytes, nameBytes.length);
+        return sha256(combined);
+    }
+
+    /**
+     * Generate a Merkle root
+     * @param {Object[]} data - The data
+     * @param {string} encoding - The encoding
+     * @returns {Object} The Merkle root
+     */
+    static generateMerkleRoot(data, encoding = 'uint8array') {
+        if (!data || data.length === 0) {
+            return null;
+        }
+        const hashes = data.map((element) => element.toHash());
+        const tree = new MerkleTree(hashes, 'sha256');
+        const root = tree.root(encoding);
+        return {root};
+    }
+
+    /**
+     * Consider a state action
+     * @param {Object} stateAction - The state action
+     */
     considerStateAction(stateAction) {
-        // console.log(`Considering state action: ${stateAction.toHex()} of kind ${stateAction.kind} - type ${stateAction.type} - action: ${stateAction.action}`);
+        if (!stateAction) {
+            console.error('RelayBlockPayload tried to consider an undefined state action.');
+            return;
+        }
         this.actions.push(stateAction);
     }
 
+    /**
+     * Consider a cluster
+     * @param {string} clusterMoniker - The cluster moniker
+     * @param {string} clusterHash - The cluster hash
+     */
     considerCluster(clusterMoniker, clusterHash) {
-        if (!clusterMoniker) {
+        if (!clusterMoniker || !clusterHash) {
             console.error('RelayBlockPayload tried to consider an undefined cluster.');
             return;
         }
@@ -130,13 +132,17 @@ export class RelayBlockPayload {
         this.clusters.push([clusterMoniker, clusterHash]);
     }
 
+    /**
+     * Convert to Uint8Array
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array() {
          // Actions
-         const actionsUint8Array = serialize.fromArray(this.actions);
+         const actionsUint8Array = serialize.fromObject(this.actions);
          const actionsTotalLengthUint8Array = varint.encodeVarInt(actionsUint8Array.value.length, 'uint8array');
 
          // Clusters
-         const clustersUint8Array = serialize.fromArray(this.clusters);
+         const clustersUint8Array = serialize.fromObject(this.clusters);
          const clustersTotalLengthUint8Array = varint.encodeVarInt(clustersUint8Array.value.length, 'uint8array');
 
          const totalLength = 0
@@ -153,72 +159,53 @@ export class RelayBlockPayload {
          result.set(clustersUint8Array.value, offset); offset += clustersUint8Array.value.length;
 
          return result;
-
-
-        // const actionsLengthValueBytes = varint.encodeVarInt(this.actions.items.length, 'uint8array');
-
-        // let resultBytes = new Uint8Array(actionsLengthValueBytes.length);
-
-        // let offset = 0;
-
-        // resultBytes.set(actionsLengthValueBytes, offset);
-        // offset += actionsLengthValueBytes.length;
-
-        // return resultBytes;
-        // let actionsItemsBytes = new Uint8Array();
-        // this.actions.forEach(action => {
-        //     const actionBytes = action?.toUint8Array?.() ?? action;
-        //     const actionLengthBytes = varint.encodeVarInt(actionBytes?.length ?? 0, 'uint8array');
-        //     let actionItemBytes = new Uint8Array(actionLengthBytes.length + actionBytes.length);
-        //     actionItemBytes.set(actionLengthBytes, 0);
-        //     // if(actionBytes.length > 0) {
-        //         actionItemBytes.set(actionBytes, actionLengthBytes.length);
-        //     // }
-        //     actionsItemsBytes = new Uint8Array([...actionsItemsBytes, ...actionItemBytes]);
-        //     offset += actionBytes.length;
-        // });
-
-        // const actionsUint8Array = this.actions.toUint8Array();
-        // const actionsTotalLengthUint8Array = varint.encodeVarInt(actionsUint8Array.length, 'uint8array');
-
-
-        // resultBytes = new Uint8Array([...resultBytes, ...actionsTotalLengthUint8Array, ...actionsUint8Array]);
-        // offset += actionsUint8Array.length;
-        
-        // const clustersLengthValueBytes = varint.encodeVarInt(this.clusters.length, 'uint8array');
-        // resultBytes = new Uint8Array([...resultBytes, ...clustersLengthValueBytes]);
-        // offset += clustersLengthValueBytes.length;
-
-        // let clustersItemsBytes = new Uint8Array();
-        // this.clusters.forEach(cluster => {
-        //     const clusterMonikerBytes = uint8array.fromString(cluster[0]);
-        //     const clusterMonikerByteLength = varint.encodeVarInt(cluster[0].length, 'uint8array');
-
-        //     const clusterHashBytes = uint8array.fromHex(cluster[1]);
-        //     const clusterHashByteLength = varint.encodeVarInt(cluster[1].length, 'uint8array');
-
-        //     const clusterItemBytes = new Uint8Array(clusterMonikerByteLength.length + clusterMonikerBytes.length + clusterHashByteLength.length + clusterHashBytes.length);
-        //     clusterItemBytes.set(clusterMonikerByteLength, 0);
-        //     clusterItemBytes.set(clusterMonikerBytes, clusterMonikerByteLength.length);
-        //     clusterItemBytes.set(clusterHashByteLength, clusterMonikerByteLength.length + clusterMonikerBytes.length);
-        //     clusterItemBytes.set(clusterHashBytes, clusterMonikerByteLength.length + clusterMonikerBytes.length + clusterHashByteLength.length);
-        //     clustersItemsBytes = new Uint8Array([...clustersItemsBytes, ...clusterItemBytes]);
-        //     offset += clusterMonikerByteLength.length + clusterMonikerBytes.length + clusterHashByteLength.length + clusterHashBytes.length;
-        // });
-
-
-        // resultBytes = new Uint8Array([...resultBytes, ...clustersItemsBytes]);
-        // offset += clustersItemsBytes.length;
-
-        // return resultBytes;
     }
 
+     /**
+     * Computes the merkle root for the payload data
+     * @param {string} encoding - The encoding
+     * @returns {Uint8Array} The Merkle root
+     */
+     computeMerkleRoot(encoding = 'uint8array') {
+        const hashes = [];
+
+        // Hash actions
+        for (const action of this.actions) {
+            if (typeof action.toHash !== 'function') {
+                throw new Error('Action must have a toHash method');
+            }
+            hashes.push(action.toHash('uint8array'));
+        }
+
+        // Hash clusters
+        for (const cluster of this.clusters) {
+            hashes.push(RelayBlockPayload.hashCluster(cluster));
+        }
+
+        if (hashes.length === 0) {
+            return encoding === 'uint8array' ? new Uint8Array(32) : uint8array.toHex(new Uint8Array(32));
+        }
+
+        const tree = new MerkleTree(hashes, 'sha256');
+        return tree.root(encoding);
+    }
+
+
+    /**
+     * Convert to Hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The Hash string
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hash = sha256(uint8Array);
         return encoding === 'uint8array' ? hash : uint8array.toHex(hash);
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             actions: this.actions,

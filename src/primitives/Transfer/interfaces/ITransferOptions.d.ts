@@ -1,5 +1,5 @@
 // src/primitives/Transfer/interfaces/TransferOptions.ts
-import { ITimelock } from "../../TimeLock/interfaces/ITimeLock.js";
+import { ITimelock } from "../../../../types/TimeLock/interfaces/ITimeLock.js";
 import {ITransferAuthorization} from "./ITransferAuthorization.js";
 import {ITransferFee} from "./ITransferFee.js";
 

@@ -1,13 +1,11 @@
+import { uint8array, varint ,varbigint } from '@scintilla-network/keys/utils';
+import { deserialize, serialize } from '@scintilla-network/serialize';
 import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from '@scintilla-network/keys';
-import { uint8array, varint ,varbigint } from '@scintilla-network/keys/utils';
+
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
-import { Authorization } from '../Authorization/Authorization.js';
-import { serialize } from '../../utils/serialize/index.js';
-// import { deserialize } from '../../utils/deserialize/index.js';
-import deserialize from '../../utils/deserialize/index.js';
-import makeDoc from '../../utils/makeDoc.js';   
 import { kindToConstructor } from '../../utils/kindToConstructor.js';
+import { Authorization } from '../Authorization/Authorization.js';
 
 function loadData(data) {
     return data.map(datum => {
@@ -29,7 +27,20 @@ function loadData(data) {
 }
 
 export class Transaction {
+    /**
+     * Create a new Transaction
+     * @param {Object} props - The properties
+     * @param {number} props.version - The version
+     * @param {string} props.cluster - The cluster
+     * @param {number} props.timestamp - The timestamp
+     * @param {string} props.action - The action
+     * @param {string} props.type - The type
+     */
     constructor(props = {}) {
+        /**
+         * The version of the Transaction
+         * @type {number}
+         */
         this.version = props.version || 1;
         this.kind = 'TRANSACTION';
 
@@ -47,11 +58,20 @@ export class Transaction {
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: props.authorizations });
     }
 
-
+    /**
+     * Create a new Transaction from a hex string
+     * @param {string} inputHex - The hex string
+     * @returns {Transaction} The Transaction instance
+     */ 
     static fromHex(inputHex){
         return this.fromUint8Array(uint8array.fromHex(inputHex));
     }
     
+    /**
+     * Create a new Transaction from a Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Transaction} The Transaction instance
+     */
     static fromUint8Array(inputArray) {
         const transactionProps = {};
         let offset = 0;
@@ -93,7 +113,7 @@ export class Transaction {
         // Data
         const {value: dataTotalLength, length: dataTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += dataTotalLengthBytes;
-        const data = deserialize.toArray(inputArray.subarray(offset));
+        const data = deserialize.toObject(inputArray.subarray(offset), kindToConstructor);
         transactionProps.data = data.value;
         offset += dataTotalLength;
 
@@ -108,7 +128,7 @@ export class Transaction {
         // Fees
         const {value: feesTotalLength, length: feesTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
         offset += feesTotalLengthBytes;
-        const fees = deserialize.toArray(inputArray.subarray(offset));
+        const fees = deserialize.toObject(inputArray.subarray(offset), kindToConstructor);
         transactionProps.fees = fees.value;
         offset += feesTotalLength;
 
@@ -122,6 +142,11 @@ export class Transaction {
         return new Transaction(transactionProps);
     }
 
+    /**
+     * Create a new Transaction from a JSON object
+     * @param {Object} json - The JSON object
+     * @returns {Transaction} The Transaction instance
+     */
     static fromJSON(json) {
         return new Transaction({
             ...json,
@@ -129,18 +154,21 @@ export class Transaction {
     }
 
 
+    /**
+     * Set the timelock of the Transaction
+     * @param {bigint} startTick - The start tick
+     * @param {bigint} endTick - The end tick
+     */
     setTimelock(startTick, endTick) {
         this.timelock = {startTick, endTick};
-        this.computeHash();
     }
 
-    computeHash() {
-        const stringified = sortedJsonByKeyStringify(this);
-        const dataUint8Array = uint8array.fromString(stringified);
-        const hash = sha256(dataUint8Array);
-        return uint8array.toHex(hash);
-    }
-
+    /**
+     * Convert the Transaction to a Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -164,7 +192,7 @@ export class Transaction {
         const typeLengthUint8Array = varint.encodeVarInt(typeUint8Array.length, 'uint8array');
        
         // Data
-        const dataUint8Array = serialize.fromArray(this.data);
+        const dataUint8Array = serialize.fromObject(this.data);
         const dataTotalLengthUint8Array = varint.encodeVarInt(dataUint8Array.value.length, 'uint8array');
 
         // Timelock
@@ -172,7 +200,7 @@ export class Transaction {
         const timelockEndAtUint8Array = varbigint.encodeVarBigInt(this.timelock.endTick, 'uint8array');
 
         // Fees
-        const feesUint8Array = serialize.fromArray(this.fees);
+        const feesUint8Array = serialize.fromObject(this.fees);
         const feesLengthUint8Array = varint.encodeVarInt(feesUint8Array.value.length, 'uint8array');
 
         let authorizationsUint8Array = new Uint8Array();
@@ -226,17 +254,36 @@ export class Transaction {
         return result;
     }
 
+    /**
+     * Convert the Transaction to a hex string
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
 
+    /**
+     * Convert the Transaction to a hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert the Transaction to a JSON object
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const obj = {
             kind: this.kind,
@@ -256,30 +303,52 @@ export class Transaction {
         return obj;
     }
 
+    /**
+     * Add an authorization to the Transaction
+     * @param {Authorization} authorization - The authorization
+     */
     addAuthorization(authorization) {
         if(authorization.signature === '' || authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
         }
+        if(!authorization.verify){
+            authorization = new Authorization(authorization);
+        }
         this.authorizations.push(authorization);
     }
 
-    verifyAuthorization() {
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid, false otherwise
+     */
+    verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
+    /**
+     * Convert the Transaction to a base64 string
+     * @returns {string} The base64 string
+     */
     toBase64() {
         const uint8Array = this.toUint8Array();
         return btoa(String.fromCharCode(...uint8Array));
     }
 
+    /**
+     * Convert the Transaction to a signable message
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {SignableMessage} The signable message
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
-    toDoc(signer) {
-        return makeDoc(this, signer);
-    }
-
+    /**
+     * Sign the Transaction
+     * @param {Signer} signer - The signer
+     * @returns {Transaction} The Transaction instance
+     */
     async sign(signer) {
         let authorization = new Authorization();
         const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
@@ -289,9 +358,14 @@ export class Transaction {
         authorization = await authorization.sign(this, signer, true);
         this.authorizations.push(authorization);
         return this;
-        // return signDoc(await this.toDoc(signer));
     }
 
+    /**
+     * Validate the Transaction
+     * @returns {Object} The validation result
+     * @property {boolean} valid - True if the Transaction is valid, false otherwise
+     * @property {string} error - The error message
+     */
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
@@ -301,17 +375,27 @@ export class Transaction {
         const authWithPublicKey = signedAuthorizations.filter(auth => auth.publicKey);
         if(authWithPublicKey.length < 0) return {valid: false, error: 'At least one authorization with public key is required.'};
 
-        if (!this.verifyAuthorization()) return {valid: false,error: 'Invalid signature.'};
+        if (!this.verifyAuthorizations()) return {valid: false,error: 'Invalid signature.'};
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the Transaction is valid
+     * @returns {boolean} True if the Transaction is valid, false otherwise
+     */
     isValid() {
         const {valid} = this.validate();
         return valid;
     }
 
+    /**
+     * Check if the Transaction is valid at a given tick
+     * @param {bigint} currentTick - The current tick
+     * @returns {boolean} True if the Transaction is valid at the given tick, false otherwise
+     */
     isValidAtTick(currentTick) {
         if (!this.timelock) return true;
+        if(this.timelock.startTick === 0n && this.timelock.endTick === 0n) return true;
         return currentTick >= this.timelock.startTick && currentTick <= this.timelock.endTick;
     }
 }

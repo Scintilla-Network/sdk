@@ -3,10 +3,7 @@ import { varint, varbigint, uint8array } from '@scintilla-network/keys/utils'
 import {SignableMessage} from "@scintilla-network/keys";
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js'
 import { Authorization } from '../Authorization/Authorization.js';
-// import { deserialize } from '../../utils/deserialize/index.js';
-import deserialize from '../../utils/deserialize/index.js';
-import { serialize } from '../../utils/serialize/index.js';
-import makeDoc from '../../utils/makeDoc.js';   
+import { serialize, deserialize } from '@scintilla-network/serialize';
 
 /**
  * @class QuorumDecision
@@ -36,6 +33,11 @@ class QuorumDecision {
 
     }
 
+    /**
+     * Create QuorumDecision from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {QuorumDecision} The QuorumDecision instance
+     */
     static fromUint8Array(inputArray) {
         const decisionProps = {};
 
@@ -87,6 +89,13 @@ class QuorumDecision {
         return new QuorumDecision(decisionProps);
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -142,21 +151,32 @@ class QuorumDecision {
         return result;
     }
 
+    /**
+     * Create QuorumDecision from hex
+     * @param {string} hex - The hex string
+     * @returns {QuorumDecision} The QuorumDecision instance
+     */
     static fromHex(hex) {
-        const buffer = uint8array.fromHex(hex);
-        return QuorumDecision.fromUint8Array(buffer);
+        const array = uint8array.fromHex(hex);
+        return QuorumDecision.fromUint8Array(array);
     }
 
+    /**
+     * Create QuorumDecision from JSON
+     * @param {Object} json - The JSON object
+     * @returns {QuorumDecision} The QuorumDecision instance
+     */
     static fromJSON(json) {
         return new QuorumDecision({
             ...json,
         });
     }
 
-        /**
+    /**
      * Converts the QuorumDecision instance to a JSON object.
-     * @param {boolean} [excludeAuthorizations = false] - Whether to exclude authorizations from the JSON.
-     * @returns {Object} The JSON representation of the instance.
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Object} The JSON object
      */
     toJSON({ excludeAuthorizations = false } = {}) {
         const obj = {
@@ -183,8 +203,8 @@ class QuorumDecision {
      * @returns {string} The hex string representation of the instance.
      */
     toHex({ excludeAuthorizations = false } = {}) {
-        const buffer = this.toUint8Array({ excludeAuthorizations });
-        return uint8array.toHex(buffer);
+        const array = this.toUint8Array({ excludeAuthorizations });
+        return uint8array.toHex(array);
     }
 
     /**
@@ -213,11 +233,6 @@ class QuorumDecision {
         authorization = await authorization.sign(this, signer, true);
         this.authorizations.push(authorization);
         return this;
-    }
-
-    toDoc(signer) {
-        return makeDoc(this, signer);
-
     }
 
     toSignableMessage() {
@@ -286,6 +301,10 @@ class QuorumDecision {
 
     }
 
+    /**
+     * Validates the QuorumDecision instance.
+     * @returns {boolean} True if the QuorumDecision instance is valid, false otherwise.
+     */
     isValid() {
         const {valid, error} = this.validate();
         if(!valid){

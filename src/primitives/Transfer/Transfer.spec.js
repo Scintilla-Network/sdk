@@ -40,11 +40,6 @@ describe('Transfer', () => {
         expect(transfer.timestamp).toBeDefined();
     });
 
-    it('should have a computeHash method', () => {
-        const transfer = new Transfer();
-        expect(transfer.computeHash).toBeDefined();
-    });
-
     it('should have a toHex method', () => {
         const transfer = new Transfer();
         expect(transfer.toHex).toBeDefined();
@@ -66,18 +61,18 @@ describe('Transfer', () => {
     });
 });
 
-describe('Transfer.computeHash', () => {
+describe('Transfer.toHash', () => {
     it('should return a string', () => {
         const transfer = new Transfer();
-        const result = transfer.computeHash();
+        const result = transfer.toHash('hex');
         expect(typeof result).toBe('string');
     });
     it('should return consistent hash', () => {
         const transfer = new Transfer({
             timestamp: 1234567890,
         });
-        const result = transfer.computeHash();
-        expect(result).toBe('cdc36ef78bd1036b74c2d1044efb01f1b7b1bb889032d026f74c4be319ba55d5');
+        const result = transfer.toHash('hex');
+        expect(result).toBe('09235b732ce5d0e45e95d409ca7934de5ebf24b0c327ae522f9cc825cfc49dc1');
     });
 });
 
@@ -160,6 +155,28 @@ describe('Transfer - Functions', () => {
             const validate = parsed.validate();
             expect(validate.valid).toBe(true);
             expect(validate.error).toBe('');
+        });
+    });
+    describe('isValidAtTick', () => {
+        it('isValidAtTick method returns true for valid transfer', () => {
+            const now = BigInt(Date.now());
+            const transfer = new Transfer({
+                timelock: {
+                    startTick: now - 1000n,
+                    endTick: now + 1000n,
+                }
+            });
+            expect(transfer.isValidAtTick(now)).toBe(true);
+            expect(transfer.isValidAtTick(now + 2000n)).toBe(false);
+            expect(transfer.isValidAtTick(now - 2000n)).toBe(false);
+    
+            const transfer2 = new Transfer();
+            expect(transfer2.isValidAtTick(0n)).toBe(true);
+            expect(transfer2.isValidAtTick(999999n)).toBe(true);
+            expect(transfer2.isValidAtTick(now)).toBe(true);
+            expect(transfer2.isValidAtTick(now + 2000n)).toBe(true);
+            expect(transfer2.isValidAtTick(now - 2000n)).toBe(true);
+          
         });
     });
     describe('Transfer data', () => {

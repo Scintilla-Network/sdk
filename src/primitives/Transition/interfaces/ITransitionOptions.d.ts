@@ -1,4 +1,4 @@
-import { ITimelock } from "../../TimeLock/interfaces/ITimeLock.js";
+import { ITimelock } from "../../../../types/TimeLock/interfaces/ITimeLock.js";
 import {ITransitionAuthorization} from "./ITransitionAuthorization.js";
 import {ITransitionFee} from "./ITransitionFee.js";
 

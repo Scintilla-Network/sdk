@@ -67,7 +67,6 @@ describe('Asset', () => {
         expect(customAsset.permissions.mint).toEqual(['admin']);
         expect(customAsset.permissions.burn).toEqual(['admin']);
         const fees = customAsset.fees[0];
-        console.log(customAsset.fees);
         expect(Number(fees.percent)).toEqual(200);
         expect(Number(fees.max)).toEqual(100);
         expect(customAsset.metadata).toEqual({
@@ -177,43 +176,5 @@ describe('Asset', () => {
         // expect(Asset.fromUint8Array(customAsset.toUint8Array())).toEqual(customAsset);
         // expect(Asset.fromUint8Array(customAsset.toUint8Array()).toHash()).toEqual(customAsset.toHash());
         // expect(Asset.fromUint8Array(customAsset.toUint8Array()).toHex()).toEqual(customAsset.toHex());
-    });
-    // TODO
-    it.skip('cannot update max supply of asset with immutable supply', () => {
-        const asset = new Asset({
-            name: 'Scintilla',
-            symbol: 'SCT',
-            supply: {
-                _max: 100_000_000n * 10n ** 8n,
-            },
-        });
-
-        asset.supply._max = 100_000_000n * 10n ** 9n;
-
-        const expectedJSON = {
-            name: 'Scintilla',
-            symbol: 'SCT',
-            supply: {
-                max: 100_000_000n * 10n ** 8n, total: 0n, circulating: 0n,
-            },
-            decimals: 9n,
-            consensus: {
-                members: [],
-                type: 'QUORUM_PROOF',
-                requirements: [],
-                distributions: [],
-            },
-            distributions: [],
-            permissions: {
-                mint: ['scintilla'],
-                burn: ['scintilla'],
-            },
-            fees: [{type: 'transfer', percent: 2n, max: 20n }],
-
-            metadata: {
-            }
-        };
-
-        expect(asset.toJSON()).toEqual(expectedJSON);
     });
 });

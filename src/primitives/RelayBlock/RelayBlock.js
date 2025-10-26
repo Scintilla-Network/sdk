@@ -1,14 +1,21 @@
 import { RelayBlockHeader } from './RelayBlockHeader.js';
 import {RelayBlockPayload} from "./RelayBlockPayload.js";
 import { sha256 } from '@scintilla-network/hashes/classic';
-
-import makeDoc from '../../utils/makeDoc.js';
+import { MerkleTree } from "@scintilla-network/trees";
 import { SignableMessage } from '@scintilla-network/keys';
 import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { NET_KINDS } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
 
 export class RelayBlock {
+    /**
+     * Create RelayBlock
+     * @param {Object} options - The options
+     * @param {Object} options.header - The header
+     * @param {Object} options.payload - The payload
+     * @param {Object[]} options.authorizations - The authorizations
+     * @returns {RelayBlock} The RelayBlock instance
+     */
     constructor(options = {}) {
         this.kind = 'RELAYBLOCK';
         this.version = 1;
@@ -18,6 +25,11 @@ export class RelayBlock {
     }
 
 
+    /**
+     * Create RelayBlock from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {RelayBlock} The RelayBlock instance
+     */
     static fromUint8Array(inputArray) {
         let offset = 0;
 
@@ -56,6 +68,21 @@ export class RelayBlock {
         });
     }
 
+    /**
+     * Create RelayBlock from Hex
+     * @param {string} hex - The Hex string
+     * @returns {RelayBlock} The RelayBlock instance
+     */
+    static fromHex(hex) {
+        const uint8Array = uint8array.fromHex(hex);
+        return RelayBlock.fromUint8Array(uint8Array);
+    }
+
+    /**
+     * Create RelayBlock from JSON
+     * @param {Object} json - The JSON object
+     * @returns {RelayBlock} The RelayBlock instance
+     */
     static fromJSON(json) {
         const instance = new RelayBlock({
             ...json,
@@ -66,6 +93,13 @@ export class RelayBlock {
     }
 
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -112,6 +146,10 @@ export class RelayBlock {
     }
 
 
+    /**
+     * Consider a state action
+     * @param {Object} stateAction - The state action
+     */
     considerStateAction(stateAction) {
         if(!stateAction){
             console.error(`Relay Block tied to consider an undefined staction`);
@@ -121,20 +159,32 @@ export class RelayBlock {
         // This changes the timestamp of the block forwards (we let the ability to set to propose time, but if not, we update each time we add a state action)
         const timeNow = BigInt(Date.now());
         const timeHeader = this.header.timestamp;
+
         // But we know the block is valid for 10 minutes max, so we can't go forward more than that
         if(timeNow > timeHeader && timeNow < timeHeader + 10000n * 60n){
             this.header.timestamp = timeNow;
         }
+        this.updateMerkleRoot();
     }
 
+    /**
+     * Consider a cluster
+     * @param {string} clusterMoniker - The cluster moniker
+     * @param {string} clusterHash - The cluster hash
+     */
     considerCluster(clusterMoniker, clusterHash) {
         if (!clusterHash || !clusterMoniker) {
             console.error('RelayBlock tried to consider an undefined element.');
             return;
         }
         this.payload.considerCluster(clusterMoniker, clusterHash);
+        this.updateMerkleRoot();
     }
 
+    /**
+     * Add an authorization
+     * @param {Object} authorization - The authorization
+     */
     addAuthorization(authorization) {
         if(authorization.signature === '' || authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
@@ -143,15 +193,30 @@ export class RelayBlock {
     }
 
 
+    /**
+     * Convert to SignableMessage
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {SignableMessage} The SignableMessage instance
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
-        return new SignableMessage(this.toHex({excludeAuthorizations: excludeAuthorizations}));
+        return new SignableMessage(this.toUint8Array({excludeAuthorizations: excludeAuthorizations}));
     }
 
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid, false otherwise
+     */
     verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
 
+    /**
+     * Sign the RelayBlock
+     * @param {Object} signer - The signer
+     * @returns {Promise<RelayBlock>} The RelayBlock instance
+     */
     async sign(signer) {
         let authorization = new Authorization();
         const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
@@ -162,15 +227,25 @@ export class RelayBlock {
         this.authorizations.push(authorization);
         return this;
     }
+
+    /**
+     * Convert to Hex
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {string} The Hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
-    static fromHex(hex) {
-        const uint8Array = uint8array.fromHex(hex);
-        return RelayBlock.fromUint8Array(uint8Array);
-    }
+    
 
+    /**
+     * Convert to JSON
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const obj = {
             kind: this.kind,
@@ -186,16 +261,59 @@ export class RelayBlock {
         return obj;
     }
 
+    /**
+     * Convert to Hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {string} The Hash string
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
-    toDoc(signer){
-        return makeDoc(this, signer);   
+    /**
+     * Update the Merkle root
+     */
+    updateMerkleRoot() {
+        this.header.merkleRoot = this.payload.computeMerkleRoot();
     }
 
+    /**
+     * Verifies an entity is in the merkle root
+     * @param {Object} entity - The entity to verify
+     * @param {boolean} isCluster - Whether the entity is a cluster
+     * @returns {boolean} - True if the entity is in the merkle root
+     */
+    verifyEntity(entity, isCluster = false) {
+        const entityHash = isCluster
+            ? RelayBlockPayload.hashCluster(entity)
+            : entity.toHash('uint8array');
+
+        const allHashes = [];
+        for (const action of this.payload.actions) {
+            allHashes.push(action.toHash('uint8array'));
+        }
+        for (const cluster of this.payload.clusters) {
+            allHashes.push(RelayBlockPayload.hashCluster(cluster));
+        }
+
+        if (allHashes.length === 0) {
+            return false;
+        }
+
+        const tree = new MerkleTree(allHashes, 'sha256');
+        const proof = tree.proof(entityHash);
+        return tree.verify(entityHash, proof, this.header.merkleRoot);
+    }
+
+
+    /**
+     * Validate the RelayBlock
+     * @returns {Object} The validation result
+     */
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
@@ -210,9 +328,22 @@ export class RelayBlock {
         if(!proposerAuthorization) return {valid: false, error: 'Proposer authorization is required.'};
 
         if (!this.verifyAuthorizations()) return {valid: false,error: 'Invalid authorization.'};
+
+        // Verify Merkle root consistency
+        const computedMerkleRoot = this.payload.computeMerkleRoot('hex');
+        const expectedMerkleRoot = uint8array.toHex(this.header.merkleRoot);
+
+        if (computedMerkleRoot !== expectedMerkleRoot) {
+            return { valid: false, error: `Merkle root mismatch: ${computedMerkleRoot} !== ${expectedMerkleRoot}` };
+        }
+        
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the RelayBlock is valid
+     * @returns {boolean} True if the RelayBlock is valid, false otherwise
+     */
     isValid() {
         const {valid} = this.validate();
         return valid;

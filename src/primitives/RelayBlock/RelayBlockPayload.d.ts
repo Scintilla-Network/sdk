@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { IRelayBlockPayloadOptions } from './interfaces/IRelayBlockPayloadOptions.js';
 
 export declare class RelayBlockPayload {
@@ -9,11 +8,10 @@ export declare class RelayBlockPayload {
 
     considerStateAction(stateAction: any): void;
     considerCluster(clusterMoniker: string, clusterHash: string): void;
-    toBuffer(): Buffer;
-    toHash(): string;
-    static fromBuffer(buffer: Buffer): RelayBlockPayload;
+    toUint8Array(): Uint8Array;
+    toHash(encoding?: 'uint8array' | 'hex'): string;
+    static fromUint8Array(uint8Array: Uint8Array): RelayBlockPayload;
     toJSON(): object;
 }
 
 export default RelayBlockPayload;
-

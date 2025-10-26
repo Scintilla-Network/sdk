@@ -10,7 +10,7 @@ describe('HashProof', () => {
         hashProof = new HashProof();
         expect(hashProof).toBeDefined();
     });
-    it.only('should create a hash proof with a header and payload', () => {
+    it('should create a hash proof with a header and payload', () => {
         hashProof = new HashProof({
             header: {
                 version: 1,
@@ -41,19 +41,19 @@ describe('HashProof', () => {
         })]}));
         expect(hashProof).toBeDefined();
     });
-    it.only('should get a valid hash', () => {
+    it('should get a valid hash', () => {
         expect(hashProof.toHash()).toBeDefined();
-        expect(hashProof.toHash()).toBe('f91b1cb5964fc05a0f0a7fbd4bfdfa2924e7174c776edc8edfc4b4766bf30233');
+        expect(hashProof.toHash('hex')).toBe('b5ae0611f5de354ba16bd55cd90accba4ad6c78f64bbc14d3001f09725c35bf7');
     });
-    it.only('should get a valid hash from hex', () => {
-        expect(hashProof.toHex()).toBe('0701600100ff7c696a829901000000000000000000000000000000000000000000000000000000000000000000000c636f72652e62616e6b696e6705616c696365bff18f3004b10b19e0996030b762228f272adb62817ac6ec1cec8a8d015f85d60000fd21010108010c636f72652e62616e6b696e670643524541544505415353455401d41104746573740474657374fd000064a7b3b6e00dfd000064a7b3b6e00dfd000064a7b3b6e00d12497b22646973747269627574696f6e73223a5b5d2c226d656d62657273223a5b5d2c22726571756972656d656e7473223a5b5d2c2274797065223a2251554f52554d5f50524f4f46227d025b5d2b7b226275726e223a5b227363696e74696c6c61225d2c226d696e74223a5b227363696e74696c6c61225d7d012f5b227472616e73666572222c7b2270657263656e74223a22323030222c226d6178223a223230303030303030227d5d027b7dfd7c696a8299010000001f7b2273746172745469636b223a2230222c22656e645469636b223a2230227d00000000');
+    it('should get a valid hash from hex', () => {
+        expect(hashProof.toHex()).toBe('070100540100ff7c696a829901000000000000000000000000000000000000000000000000000000000000000000000005616c69636500000000000000000000000000000000000000000000000000000000000000000000fd0e010108010c636f72652e62616e6b696e67fd7c696a829901000006435245415445054153534554dc1801d91104746573740474657374fd000064a7b3b6e00dfd000064a7b3b6e00dfd000064a7b3b6e00d12497b22646973747269627574696f6e73223a5b5d2c226d656d62657273223a5b5d2c22726571756972656d656e7473223a5b5d2c2274797065223a2251554f52554d5f50524f4f46227d025b5d2b7b226275726e223a5b227363696e74696c6c61225d2c226d696e74223a5b227363696e74696c6c61225d7d01347b2274797065223a227472616e73666572222c2270657263656e74223a22323030222c226d6178223a223230303030303030227d027b7d0000031800000000000000');
     });
-    it.only('converts to a Uint8Array correctly', () => {
+    it('converts to a Uint8Array correctly', () => {
         const array = hashProof.toUint8Array();
         expect(array).toBeDefined();
         const parsed = HashProof.fromUint8Array(array);
-        expect(parsed.toHash()).toBe(hashProof.toHash());
+        expect(parsed.toHash('hex')).toBe(hashProof.toHash('hex'));
         expect(parsed.toHex()).toBe(hashProof.toHex());
-        expect(parsed.toHash()).toBe('f91b1cb5964fc05a0f0a7fbd4bfdfa2924e7174c776edc8edfc4b4766bf30233');
+        expect(parsed.toHash('hex')).toBe('b5ae0611f5de354ba16bd55cd90accba4ad6c78f64bbc14d3001f09725c35bf7');
     });
 });

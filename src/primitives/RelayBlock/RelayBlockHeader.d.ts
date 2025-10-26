@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import {IRelayBlockHeaderOptions} from "./interfaces/IRelayBlockHeaderOptions.js";
 
 export declare class RelayBlockHeader {
@@ -9,9 +8,9 @@ export declare class RelayBlockHeader {
 
     constructor(options?: IRelayBlockHeaderOptions);
 
-    toBuffer(): Buffer;
-    toHash(): string;
-    static fromBuffer(buffer: Buffer): RelayBlockHeader;
+    toUint8Array(): Uint8Array; 
+    toHash(encoding?: 'uint8array' | 'hex'): string;
+    static fromUint8Array(uint8Array: Uint8Array): RelayBlockHeader;
     toJSON(): object;
 }
 

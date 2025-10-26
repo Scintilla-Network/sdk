@@ -13,6 +13,12 @@ import { NET_KINDS } from '../messages/NetMessage/NET_KINDS.js';
 import { NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
 class HashProofPayload {
+    /**
+     * Create HashProofPayload
+     * @param {Object} options - The options
+     * @param {Object[]} options.data - The data
+     * @returns {HashProofPayload} The HashProofPayload instance
+     */
     constructor(options) {
         this.data = [];
         if(options.data.length > 0) {
@@ -51,11 +57,21 @@ class HashProofPayload {
         }
     }
 
+    /**
+     * Create HashProofPayload from hex
+     * @param {string} hex - The hex string
+     * @returns {HashProofPayload} The HashProofPayload instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return this.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Create HashProofPayload from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {HashProofPayload} The HashProofPayload instance
+     */
     static fromUint8Array(inputArray) {
         try {
             let offset = 0;
@@ -120,6 +136,10 @@ class HashProofPayload {
         }
     }
 
+    /**
+     * Consider an element
+     * @param {Object} element - The element
+     */
     consider(element) {
         if (!element) {
             console.error('HashProofPayload tried to consider an undefined element.');
@@ -145,6 +165,10 @@ class HashProofPayload {
         }
     }
 
+    /**
+     * Insertion sort by timestamp
+     * @param {Object[]} data - The data
+     */
     insertionSortByTimestamp(data) {
         for (let i = 1; i < data.length; i++) {
             let j = i;
@@ -155,6 +179,10 @@ class HashProofPayload {
         }
     }
 
+    /**
+     * Convert to Uint8Array
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array() {
         if (this.data.length > 1_000_000) {
             throw new Error('Unusually large data');
@@ -205,12 +233,21 @@ class HashProofPayload {
         return result;
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             data: this.data.map(element => element.toJSON()),
@@ -219,6 +256,7 @@ class HashProofPayload {
 
     /**
      * Validates individual elements in the payload
+     * @returns {Object} The validation result
      */
     validateElements() {
         if (!this.data || this.data.length === 0) {
@@ -268,6 +306,7 @@ class HashProofPayload {
 
     /**
      * Validates timestamp ordering of elements
+     * @returns {Object} The validation result
      */
     validateTimestampOrdering() {
         if (this.data.length <= 1) {
@@ -288,6 +327,7 @@ class HashProofPayload {
 
     /**
      * Validates payload size constraints
+     * @returns {Object} The validation result
      */
     validateSize() {
         const MAX_ELEMENTS = 10000;
@@ -306,6 +346,12 @@ class HashProofPayload {
         return { valid: true };
     }
 
+    /**
+     * Generate Merkle root
+     * @param {Object[]} data - The data
+     * @param {string} encoding - The encoding
+     * @returns {Object} The Merkle root
+     */
     static generateMerkleRoot(data, encoding = 'uint8array') {
         if (!data || data.length === 0) {
             return null;
@@ -317,6 +363,8 @@ class HashProofPayload {
     }
     /**
      * Computes the merkle root for the payload data
+     * @param {string} encoding - The encoding
+     * @returns {Object} The Merkle root
      */
     computeMerkleRoot(encoding = 'uint8array') {
         if (!this.data || this.data.length === 0) {
@@ -332,6 +380,8 @@ class HashProofPayload {
 
     /**
      * Verifies that the computed merkle root matches the expected one
+     * @param {string} expectedRoot - The expected root
+     * @returns {Object} The verification result
      */
     verifyMerkleRoot(expectedRoot) {
         if (!this.data || this.data.length === 0) {
@@ -376,6 +426,7 @@ class HashProofPayload {
 
     /**
      * Comprehensive payload validation
+     * @returns {Object} The validation result
      */
     isValid() {
         // 1. Validate individual elements
@@ -401,6 +452,7 @@ class HashProofPayload {
 
     /**
      * Check if payload is empty
+     * @returns {boolean} True if the payload is empty
      */
     isEmpty() {
         return !this.data || this.data.length === 0;
@@ -408,6 +460,7 @@ class HashProofPayload {
 
     /**
      * Get payload statistics
+     * @returns {Object} The statistics
      */
     getStats() {
         const stats = {

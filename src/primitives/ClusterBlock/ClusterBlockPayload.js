@@ -2,11 +2,23 @@ import { sha256 } from '@scintilla-network/hashes/classic';
 import { uint8array, varint, json } from '@scintilla-network/keys/utils';
 
 export class ClusterBlockPayload {
+    /**
+     * Create ClusterBlockPayload
+     * @param {Object} props - The properties
+     * @param {string[]} props.hashProofHashes - The hash proof hashes
+     * @param {string[]} props.orderedStateActions - The ordered state actions
+     * @returns {ClusterBlockPayload} The ClusterBlockPayload instance
+     */
     constructor(props = {}) {
         this.hashProofHashes = props.hashProofHashes || [];
         this.orderedStateActions = props.orderedStateActions || [];
     }
 
+    /**
+     * Consider a key
+     * @param {string} key - The key to consider
+     * @returns {void}
+     */
     consider(key) {
         if (!key || typeof key !== 'string') {
             console.error('BlockData tried to consider without a proper key element.');
@@ -38,6 +50,10 @@ export class ClusterBlockPayload {
         }
     }
 
+    /**
+     * Convert to Uint8Array
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array() {
         const hashProofHashesUint8Array = uint8array.fromString(JSON.stringify(this.hashProofHashes));
         const orderedStateActionsUint8Array = uint8array.fromString(JSON.stringify(this.orderedStateActions));
@@ -57,12 +73,22 @@ export class ClusterBlockPayload {
         return result;
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Create ClusterBlockPayload from Uint8Array
+     * @param {Uint8Array} uint8Array - The Uint8Array
+     * @returns {ClusterBlockPayload} The ClusterBlockPayload instance
+     */
     static fromUint8Array(uint8Array) {
         let offset = 0;
 
@@ -83,6 +109,10 @@ export class ClusterBlockPayload {
         });
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             hashProofHashes: this.hashProofHashes,

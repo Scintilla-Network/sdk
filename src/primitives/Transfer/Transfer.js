@@ -23,6 +23,15 @@ function loadData(data) {
 }
 
 export class Transfer {
+    /**
+     * Create a new Transfer
+     * @param {Object} props - The properties
+     * @param {number} props.version - The version
+     * @param {string} props.cluster - The cluster
+     * @param {number} props.timestamp - The timestamp
+     * @param {string} props.action - The action
+     * @param {string} props.type - The type
+     */
     constructor(props = {}) {
         this.version = props.version || 1;
         this.kind = 'TRANSFER';
@@ -41,16 +50,31 @@ export class Transfer {
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: props.authorizations });
     }
 
+    /**
+     * Create a new Transfer from a JSON object
+     * @param {Object} json - The JSON object
+     * @returns {Transfer} The Transfer instance
+     */
     static fromJSON(json) {
         return new Transfer({
             ...json,
         });
     }
 
+    /**
+     * Create a new Transfer from a hex string
+     * @param {string} hex - The hex string
+     * @returns {Transfer} The Transfer instance
+     */
     static fromHex(hex) {
         return this.fromUint8Array(uint8array.fromHex(hex));
     }
 
+    /**
+     * Create a new Transfer from a Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Transfer} The Transfer instance
+     */
     static fromUint8Array(inputArray) {
         const transferProps = {};
 
@@ -117,6 +141,12 @@ export class Transfer {
     }
 
 
+    /**
+     * Convert the Transfer to a Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -197,23 +227,35 @@ export class Transfer {
         return result;
     }
 
-    computeHash() {
-        const stringified = json.sortedJsonByKeyStringify(this);
-        const dataAsUint8Array = uint8array.fromString(stringified);
-        const hash = sha256(dataAsUint8Array);
-        return uint8array.toHex(hash);
-    }
-
+    /**
+     * Convert the Transfer to a hex string
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
+    /**
+     * Convert the Transfer to a hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert the Transfer to a JSON object
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const obj = {
             kind: this.kind,
@@ -234,19 +276,27 @@ export class Transfer {
         return obj;
     }
 
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid, false otherwise
+     */
     verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
-    getPublicKey() {
-        return this.authorizations?.[0]?.publicKey;
-    }
-
+    /**
+     * Convert the Transfer to a base64 string
+     * @returns {string} The base64 string
+     */
     toBase64() {
         const uint8Array = this.toUint8Array();
         return btoa(String.fromCharCode(...uint8Array));
     }
 
+    /**
+     * Add an authorization to the Transfer
+     * @param {Authorization} authorization - The authorization
+     */
     addAuthorization(authorization) {
         if (authorization.signature === '' || authorization.signature === undefined) {
             throw new Error('Signature is required for authorization.');
@@ -257,10 +307,21 @@ export class Transfer {
         this.authorizations.push(authorization);
     }
 
+    /**
+     * Convert the Transfer to a signable message
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {SignableMessage} The signable message
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
+    /**
+     * Sign the Transfer
+     * @param {Signer} signer - The signer
+     * @returns {Transfer} The Transfer instance
+     */
     async sign(signer) {
         let authorization = new Authorization();
         const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
@@ -272,6 +333,12 @@ export class Transfer {
         return this;
     }
 
+    /**
+     * Validate the Transfer
+     * @returns {Object} The validation result
+     * @property {boolean} valid - True if the Transfer is valid, false otherwise
+     * @property {string} error - The error message
+     */
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
@@ -285,13 +352,23 @@ export class Transfer {
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the Transfer is valid
+     * @returns {boolean} True if the Transfer is valid, false otherwise
+     */
     isValid() {
         const {valid} = this.validate();
         return valid;
     }
 
+    /**
+     * Check if the Transfer is valid at a given tick
+     * @param {bigint} currentTick - The current tick
+     * @returns {boolean} True if the Transfer is valid at the given tick, false otherwise
+     */
     isValidAtTick(currentTick) {
         if (!this.timelock) return true;
+        if(this.timelock.startTick === 0n && this.timelock.endTick === 0n) return true;
         return currentTick >= this.timelock.startTick && currentTick <= this.timelock.endTick;
     }
 }

@@ -218,7 +218,6 @@ describe('Transition', () => {
         expect(validation).toEqual({ valid: true, error: '' });
     });
 
-
     it('isValid method returns true for valid transition', () => {
         const transition = new Transition({
             timestamp: 1720130703556
@@ -231,6 +230,28 @@ describe('Transition', () => {
 
         expect(isValid).toBe(true);
     });
+
+    it('isValidAtTick method returns true for valid transition', () => {
+        const now = BigInt(Date.now());
+        const transition = new Transition({
+            timelock: {
+                startTick: now - 1000n,
+                endTick: now + 1000n,
+            }
+        });
+        expect(transition.isValidAtTick(now)).toBe(true);
+        expect(transition.isValidAtTick(now + 2000n)).toBe(false);
+        expect(transition.isValidAtTick(now - 2000n)).toBe(false);
+
+        const transition2 = new Transition();
+        expect(transition2.isValidAtTick(0n)).toBe(true);
+        expect(transition2.isValidAtTick(999999n)).toBe(true);
+        expect(transition2.isValidAtTick(now)).toBe(true);
+        expect(transition2.isValidAtTick(now + 2000n)).toBe(true);
+        expect(transition2.isValidAtTick(now - 2000n)).toBe(true);
+      
+    });
+
     describe('toUint8Array', () => {
         it('should have the same uint8Array', () => {
             const coreDAOIdentity = new Identity({

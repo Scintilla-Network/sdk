@@ -2,6 +2,19 @@ import { sha256 } from '@scintilla-network/hashes/classic';
 import { uint8array, varint } from '@scintilla-network/keys/utils';
 
 class HashProofHeader {
+    /**
+     * Create HashProofHeader
+     * @param {Object} options - The options
+     * @param {number} options.timestamp - The timestamp
+     * @param {number} options.height - The height
+     * @param {string} options.previousHash - The previous hash
+     * @param {string} options.proposer - The proposer
+     * @param {string} options.merkleRoot - The merkle root
+     * @param {bigint} options.nonce - The nonce
+     * @param {bigint} options.difficulty - The difficulty
+     * @param {number} options.version - The version
+     * @returns {HashProofHeader} The HashProofHeader instance
+     */
     constructor(options = {}) {
         this.timestamp = options.timestamp ? BigInt(options.timestamp) : BigInt(Date.now());
         this.height = options.height ?? 0;
@@ -13,7 +26,11 @@ class HashProofHeader {
         this.version = options.version ?? 1;
     }
 
-
+    /**
+     * Create HashProofHeader from Uint8Array
+     * @param {Uint8Array} uint8Array - The Uint8Array
+     * @returns {HashProofHeader} The HashProofHeader instance
+     */
     static fromUint8Array(uint8Array) {
         let offset = 0;
 
@@ -76,6 +93,10 @@ class HashProofHeader {
         return blockHeader;
     }
 
+    /**
+     * Convert to Uint8Array
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array() {
         // Version - use varint instead of fixed 4 bytes
         const versionUint8Array = varint.encodeVarInt(this.version);
@@ -129,16 +150,29 @@ class HashProofHeader {
         return result;
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert to hex
+     * @returns {string} The hex string
+     */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             version: this.version,
@@ -153,6 +187,10 @@ class HashProofHeader {
         };
     }
 
+    /**
+     * Validate the HashProofHeader
+     * @returns {Object} The validation result
+     */
     isValid() {
         // Version validation
         if (!Number.isInteger(this.version) || this.version < 1) {

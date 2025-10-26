@@ -1,12 +1,23 @@
 import {  uint8array, varint, json } from '@scintilla-network/keys/utils';
 import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from '@scintilla-network/keys';
-
+import { serialize, deserialize } from '@scintilla-network/serialize';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
-import makeDoc from '../../utils/makeDoc.js';
 
 class GovernanceVote {
+    /**
+     * Create GovernanceVote
+     * @param {Object} options - The options
+     * @param {string} options.proposal - The proposal
+     * @param {string} options.vote - The vote
+     * @param {string} options.dao - The DAO
+     * @param {number} options.timestamp - The timestamp
+     * @param {string} options.voter - The voter
+     * @param {number} options.votingPower - The voting power
+     * @param {Authorization[]} options.authorizations - The authorizations
+     * @returns {GovernanceVote} The GovernanceVote instance
+     */
     constructor(options = {}) {
         this.kind = 'GOVERNANCEVOTE';
         this.version = 1;
@@ -19,24 +30,34 @@ class GovernanceVote {
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: options?.authorizations });
     }
 
+    /**
+     * Create GovernanceVote from JSON
+     * @param {Object} json - The JSON object
+     * @returns {GovernanceVote} The GovernanceVote instance
+     */
     static fromJSON(json) {
         return new GovernanceVote({
             ...json,
         });
     }
 
+    /**
+     * Create GovernanceVote from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {GovernanceVote} The GovernanceVote instance
+     */
     static fromUint8Array(inputArray) {
         const voteProps = {};
         let offset = 0;
 
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: elementKind, length: elementKindLength} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += elementKindLength;
         if(elementKind !== NET_KINDS['GOVERNANCEVOTE']) {
             throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['GOVERNANCEVOTE']}(GOVERNANCEVOTE)`);
         }
         voteProps.kind = NET_KINDS_ARRAY[elementKind];
 
-        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: version, length: versionLength} = deserialize.toVarInt(inputArray.subarray(offset));
         voteProps.version = version;
         offset += versionLength;
 
@@ -45,31 +66,31 @@ class GovernanceVote {
         offset += timestampBytes;
 
         // Proposal
-        const {value: proposalLength, length: proposalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: proposalLength, length: proposalLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += proposalLengthBytes;
         voteProps.proposal = uint8array.toString(inputArray.subarray(offset, offset + proposalLength));
         offset += proposalLength;
 
         // Vote
-        const {value: voteLength, length: voteLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: voteLength, length: voteLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += voteLengthBytes;
         voteProps.vote = uint8array.toString(inputArray.subarray(offset, offset + voteLength));
         offset += voteLength;
 
         // DAO
-        const {value: daoLength, length: daoLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: daoLength, length: daoLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += daoLengthBytes;
         voteProps.dao = uint8array.toString(inputArray.subarray(offset, offset + daoLength));
         offset += daoLength;
 
         // Voter
-        const {value: voterLength, length: voterLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: voterLength, length: voterLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += voterLengthBytes;
         voteProps.voter = uint8array.toString(inputArray.subarray(offset, offset + voterLength));
         offset += voterLength;
 
         // Voting Power
-        const {value: votingPower, length: votingPowerBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: votingPower, length: votingPowerBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         voteProps.votingPower = votingPower;
         offset += votingPowerBytes;
 
@@ -80,17 +101,23 @@ class GovernanceVote {
     }
 
 
-    static fromBuffer(buffer) {
-        const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-        return GovernanceVote.fromUint8Array(uint8Array);
-    }
-
-
+    /**
+     * Create GovernanceVote from hex
+     * @param {string} hex - The hex string
+     * @returns {GovernanceVote} The GovernanceVote instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return GovernanceVote.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -100,28 +127,28 @@ class GovernanceVote {
         }
 
         const kind = NET_KINDS[this.kind];
-        const elementKindUint8Array = varint.encodeVarInt(kind, 'uint8array');
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
+        const {value: elementKindUint8Array, length: elementKindLengthUint8Array} = serialize.fromVarInt(kind, 'uint8array');
+        const {value: versionUint8Array, length: versionLengthUint8Array} = serialize.fromVarInt(this.version, 'uint8array');
         const timestampUint8Array = varint.encodeVarInt(this.timestamp, 'uint8array');
 
         // Proposal
         const proposalUint8Array = uint8array.fromString(this.proposal);
-        const proposalLengthUint8Array = varint.encodeVarInt(proposalUint8Array.length, 'uint8array');
+        const {value: proposalLengthUint8Array, length: proposalLengthUint8ArrayBytes} = serialize.fromVarInt(proposalUint8Array.length, 'uint8array');
 
         // Vote
         const voteUint8Array = uint8array.fromString(this.vote);
-        const voteLengthUint8Array = varint.encodeVarInt(voteUint8Array.length, 'uint8array');
+        const {value: voteLengthUint8Array, length: voteLengthUint8ArrayBytes} = serialize.fromVarInt(voteUint8Array.length, 'uint8array');
 
         // DAO
         const daoUint8Array = uint8array.fromString(this.dao);
-        const daoLengthUint8Array = varint.encodeVarInt(daoUint8Array.length, 'uint8array');
+        const {value: daoLengthUint8Array, length: daoLengthUint8ArrayBytes} = serialize.fromVarInt(daoUint8Array.length, 'uint8array');
 
         // Voter
         const voterUint8Array = uint8array.fromString(this.voter);
-        const voterLengthUint8Array = varint.encodeVarInt(voterUint8Array.length, 'uint8array');
+        const {value: voterLengthUint8Array, length: voterLengthUint8ArrayBytes} = serialize.fromVarInt(voterUint8Array.length, 'uint8array');
 
         // Voting Power
-        const votingPowerUint8Array = varint.encodeVarInt(this.votingPower, 'uint8array');
+        const {value: votingPowerUint8Array, length: votingPowerLengthUint8Array} = serialize.fromVarInt(this.votingPower, 'uint8array');
 
         // Authorizations
         let authorizationsUint8Array = new Uint8Array();
@@ -176,16 +203,33 @@ class GovernanceVote {
         return result;
     }
 
+    /**
+     * Convert to hex
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {string} The hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Add an authorization
+     * @param {Authorization} authorization - The authorization
+     */
     addAuthorization(authorization) {
         authorization = new Authorization(authorization);
         if(authorization.signature === '' || authorization.signature === undefined){
@@ -196,34 +240,60 @@ class GovernanceVote {
         this.authorizations.addAuthorization(authorization);
     }
 
-    verifySignature() {
-        return this.authorizations.verify(this);
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid
+     */
+    verifyAuthorizations() {
+        return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
+    /**
+     * Convert to signable message
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {SignableMessage} The signable message
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
-    toDoc(signer) {
-        return makeDoc(this, signer);
-    }
-
+    /**
+     * Sign the vote
+     * @param {Wallet} signer - The signer
+     * @returns {Promise<GovernanceVote>} The signed vote
+     */
     async sign(signer) {
-        this.authorizations.sign(this, signer);
+        let authorization = new Authorization();
+        const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
+        if(existingAuthorization){
+            this.authorizations.splice(this.authorizations.indexOf(existingAuthorization), 1);
+        }
+        authorization = await authorization.sign(this, signer, true);
+        this.authorizations.push(authorization);
         return this;
-        // return signDoc(await this.toDoc(signer));
     }
 
+    /**
+     * Convert to hex
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {string} The hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
+    /**
+     * Validate the vote
+     * @returns {Object} The validation result
+     */
     validate() {
-        if (!this.authorizations || this.authorizations.authorizations.length === 0) {
+        if (!this.authorizations || this.authorizations.length === 0) {
             return {valid: false, error: 'Authorizations are required.'};
         }
 
-        const signedAuthorizations = this.authorizations.authorizations.filter(auth => auth.signature);
+        const signedAuthorizations = this.authorizations.filter(auth => auth.signature);
         if (signedAuthorizations.length === 0) {
             return {valid: false, error: 'At least one authorization with signature is required.'};
         }
@@ -233,18 +303,28 @@ class GovernanceVote {
             return {valid: false, error: 'At least one authorization with public key is required.'};
         }
 
-        if (!this.verifySignature()) {
-            return {valid: false, error: 'Invalid signature.'};
+        if (!this.verifyAuthorizations()) {
+            return {valid: false, error: 'Invalid authorization.'};
         }
 
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the vote is valid
+     * @returns {boolean} True if the vote is valid
+     */
     isValid() {
         const {valid, error} = this.validate();
         return valid;
     }
 
+    /**
+     * Convert to JSON
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const json = {
             kind: this.kind,

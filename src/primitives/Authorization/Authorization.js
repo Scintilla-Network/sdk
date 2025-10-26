@@ -1,7 +1,7 @@
-import { sha256 } from '@scintilla-network/hashes/classic';
+import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { SignableMessage } from '@scintilla-network/keys';
-import { llog } from '../../utils/llog.js';
-import { uint8array, varint, json } from '@scintilla-network/keys/utils';
+import { sha256 } from '@scintilla-network/hashes/classic';
+import { llog } from '@scintilla-network/serialize';
 
 /**
  * Authorization class for handling cryptographic authorization data
@@ -29,6 +29,8 @@ export class Authorization {
 
     /**
      * Create Authorization from hex string
+     * @param {string} hex - The hex string
+     * @returns {Authorization} The Authorization instance
      */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
@@ -37,6 +39,8 @@ export class Authorization {
     
     /**
      * Create Authorization from JSON
+     * @param {Object} json - The JSON object
+     * @returns {Authorization} The Authorization instance
      */
     static fromJSON(json) {
         llog.log(`- Authorization fromJSON`);
@@ -51,7 +55,9 @@ export class Authorization {
 
      /**
      * Create Authorization from Uint8Array
-     */
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Authorization} The Authorization instance
+    */
      static fromUint8Array(inputArray) {
         llog.log(`---- Authorization.fromUint8Array (inputArray: ${uint8array.toHex(inputArray)})`);
         let offset = 0;
@@ -130,7 +136,7 @@ export class Authorization {
 
     /**
      * Verify the authorization
-     * @param {Object} element - The element to verify
+    * @param {Object} element - The element to verify
      * @returns {Object} - The verification result
      */
     verify(element) {
@@ -173,6 +179,7 @@ export class Authorization {
 
     /**
      * Convert Authorization to Uint8Array using the bit-flag encoding pattern from Voucher
+     * @returns {Uint8Array} The Uint8Array
      */
     toUint8Array() {
         const chunks = [];
@@ -238,6 +245,7 @@ export class Authorization {
 
     /**
      * Convert to JSON representation
+     * @returns {Object} The JSON representation of the Authorization
      */
     toJSON() {
         return {
@@ -251,6 +259,8 @@ export class Authorization {
    
     /**
      * Compute hash of the authorization
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
      */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
@@ -260,11 +270,18 @@ export class Authorization {
 
     /**
      * Convert to hex string
+     * @returns {string} The hex string
      */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
+    /**
+     * Verify signatures
+     * @param {Object} element - The element to verify
+     * @param {string} publicKey - The public key
+     * @returns {Object} The verification result
+     */
     verifySignatures(element, publicKey) {
         if(!this.signature) return {valid: false, error: 'Signature is required for verification.'};
         if(!this.publicKey && !publicKey) return {valid: false, error: 'Public key is required for verification.'};
@@ -278,6 +295,11 @@ export class Authorization {
         return {valid: true, error: ''};
     }
 
+    /**
+     * Get signed bytes
+     * @param {Object} element - The element to get signed bytes
+     * @returns {SignableMessage} The signed bytes
+     */
     getSignedBytes(element) {
         const isDocument = element && element.toHex;
         if(!isDocument){
@@ -294,6 +316,12 @@ export class Authorization {
     }
 
 
+    /**
+     * Sign the authorization
+     * @param {Object} element - The element to sign
+     * @param {Signer} signer - The signer
+     * @returns {Authorization} The signed authorization
+     */
     async sign(element, signer) {
         const isDocument = element && element.toHex;
         if(!isDocument){
@@ -317,6 +345,7 @@ export class Authorization {
 
     /**
      * Check if authorization has a signature
+     * @returns {boolean} True if the authorization has a signature
      */
     hasSignature() {
         return this.signature !== null && this.signature.length > 0;
@@ -324,6 +353,7 @@ export class Authorization {
 
     /**
      * Check if authorization has a public key
+     * @returns {boolean} True if the authorization has a public key
      */
     hasPublicKey() {
         return this.publicKey !== null && this.publicKey.length > 0;
@@ -331,6 +361,8 @@ export class Authorization {
 
     /**
      * Check if authorization is valid (has at least signature)
+     * @param {Object} element - The element to verify
+     * @returns {boolean} True if the authorization is valid
      */
     isValid(element) {
         if(!element) {
@@ -346,6 +378,7 @@ export class Authorization {
 
     /**
      * Check if authorization is empty (no data)
+     * @returns {boolean} True if the authorization is empty
      */
     isEmpty() {
         return !this.signature && !this.publicKey && !this.moniker && !this.address;
@@ -353,6 +386,7 @@ export class Authorization {
 
     /**
      * Get authorization type flags
+     * @returns {number} The authorization type flags
      */
     getTypeFlags() {
         let flags = 0;
@@ -365,6 +399,7 @@ export class Authorization {
 
     /**
      * Clone the authorization
+     * @returns {Authorization} The cloned authorization
      */
     clone() {
         return new Authorization({
@@ -377,6 +412,8 @@ export class Authorization {
 
     /**
      * Compare with another authorization
+     * @param {Authorization} other - The other authorization
+     * @returns {boolean} True if the authorizations are equal
      */
     equals(other) {
         if (!(other instanceof Authorization)) return false;
@@ -404,6 +441,11 @@ export class Authorization {
         return this.moniker === other.moniker && this.address === other.address;
     }
 
+    /**
+     * Create authorizations from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Authorization[]} The authorizations
+     */
     static fromAuthorizationsUint8Array(inputArray) {
         const authorizations = [];
         let offset = 0;
@@ -425,14 +467,29 @@ export class Authorization {
         return authorizations;
     }
 
+    /**
+     * Create authorizations from JSON
+     * @param {Object} json - The JSON object
+     * @returns {Authorization[]} The authorizations
+     */
     static fromAuthorizationsJSON(json) {
         return (json.authorizations?.length > 0) ? json.authorizations.map(auth => Authorization.fromJSON(auth)) : [];
     }
     
+    /**
+     * Create authorizations from JSON
+     * @param {Authorization[]} authorizations - The authorizations
+     * @returns {Object[]} The JSON representation of the authorizations
+     */
     static toAuthorizationsJSON(authorizations) {
         return authorizations.map(auth => auth.toJSON());
     }
 
+    /**
+     * Create authorizations from Uint8Array
+     * @param {Authorization[]} authorizations - The authorizations
+     * @returns {Uint8Array} The Uint8Array
+     */
     static toAuthorizationsUint8Array(authorizations) {
         llog.log(`- Authorizations toAuthorizationsUint8Array`);
         llog.log(authorizations);

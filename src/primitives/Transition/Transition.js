@@ -26,6 +26,15 @@ function loadData(data) {
 }
 
 export class Transition {
+    /**
+     * Create a new Transition
+     * @param {Object} props - The properties
+     * @param {number} props.version - The version
+     * @param {string} props.cluster - The cluster
+     * @param {number} props.timestamp - The timestamp
+     * @param {string} props.action - The action
+     * @param {string} props.type - The type
+     */
     constructor(props = {}) {
         this.kind = 'TRANSITION';
         this.version = props.version || 1;
@@ -43,6 +52,11 @@ export class Transition {
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: props.authorizations });
     }
 
+    /**
+     * Create a new Transition from a Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Transition} The Transition instance
+     */
     static fromUint8Array(inputArray) {
         const transitionProps = {};
         let offset = 0;
@@ -110,6 +124,11 @@ export class Transition {
         return new Transition(transitionProps);
     }
 
+    /**
+     * Create a new Transition from a hex string
+     * @param {string} hex - The hex string
+     * @returns {Transition} The Transition instance
+     */
     static fromHex(hex) {
         if(typeof hex !== 'string') {
             throw new Error('Hex must be a string');
@@ -117,6 +136,11 @@ export class Transition {
         return Transition.fromUint8Array(uint8array.fromHex(hex));
     }
 
+    /**
+     * Create a new Transition from a JSON object
+     * @param {Object} json - The JSON object
+     * @returns {Transition} The Transition instance
+     */
     static fromJSON(json) {
         try {
             return new Transition({
@@ -129,6 +153,12 @@ export class Transition {
         
     }
 
+    /**
+     * Convert the Transition to a Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -211,16 +241,35 @@ export class Transition {
         return result;
     }
 
+    /**
+     * Convert the Transition to a hex string
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
+    /**
+     * Convert the Transition to a hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert the Transition to a JSON object
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const obj = {
             kind: this.kind,
@@ -240,6 +289,10 @@ export class Transition {
         return obj;
     }
 
+    /**
+     * Add an authorization to the Transition
+     * @param {Authorization} authorization - The authorization
+     */
     addAuthorization(authorization) {
         if(authorization.signature === '' || authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
@@ -257,19 +310,36 @@ export class Transition {
         this.authorizations.push(authorization);
     }
 
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid, false otherwise
+     */
     verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
     
+    /**
+     * Convert the Transition to a base64 string
+     * @returns {string} The base64 string
+     */
     toBase64() {
         const uint8Array = this.toUint8Array();
         return btoa(String.fromCharCode(...uint8Array));
     }
 
+    /**
+     * Convert the Transition to a signable message
+     * @returns {SignableMessage} The signable message
+     */
     toSignableMessage() {
         return new SignableMessage(this.toHash());
     }
 
+    /**
+     * Sign the Transition
+     * @param {Signer} signer - The signer
+     * @returns {Transition} The Transition instance
+     */
     async sign(signer) {
         let authorization = new Authorization();
         const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
@@ -281,10 +351,20 @@ export class Transition {
         return this;
     }
 
+    /**
+     * Get the public key of the Transition
+     * @returns {string} The public key
+     */
     getPublicKey() {
         return this.authorizations?.[0]?.publicKey;
     }
 
+    /**
+     * Validate the Transition
+     * @returns {Object} The validation result
+     * @property {boolean} valid - True if the Transition is valid, false otherwise
+     * @property {string} error - The error message
+     */
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
@@ -298,6 +378,10 @@ export class Transition {
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the Transition is valid
+     * @returns {boolean} True if the Transition is valid, false otherwise
+     */
     isValid() {
         const {valid, error} = this.validate();
         if(!valid){
@@ -306,8 +390,14 @@ export class Transition {
         return valid;
     }
 
+    /**
+     * Check if the Transition is valid at a given tick
+     * @param {bigint} currentTick - The current tick
+     * @returns {boolean} True if the Transition is valid at the given tick, false otherwise
+     */
     isValidAtTick(currentTick) {
         if (!this.timelock) return true;
+        if(this.timelock.startTick === 0n && this.timelock.endTick === 0n) return true;
         return currentTick >= this.timelock.startTick && currentTick <= this.timelock.endTick;
     }
 }

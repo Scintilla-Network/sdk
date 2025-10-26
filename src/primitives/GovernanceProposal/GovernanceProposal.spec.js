@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@scintilla-network/litest';
 import GovernanceProposal from './GovernanceProposal.js';
+import { Wallet } from '@scintilla-network/wallet';
 
 describe('GovernanceProposal', () => {
     it('initializes correctly with mandatory fields', () => {
@@ -83,6 +84,21 @@ describe('GovernanceProposal', () => {
         expect(parsedProposal.toHex()).toEqual(proposal.toHex());
         expect(parsedProposal.toJSON()).toEqual(proposal.toJSON());
         expect(parsedProposal.toUint8Array()).toEqual(proposal.toUint8Array());
-        expect(parsedProposal.toHash('hex')).toEqual('3eaebbdc06109816a0b0e70a823bd8c3a5ce550fb55ebb8ad5b0f2a49e8f8c83');
+        expect(parsedProposal.toHash('hex')).toEqual('d85764754a3d0f1b1cfb2b16ed0dcfe6292dc418f156f2ae212aa6f203510797');
+    });
+
+    it('should sign and verify a GovernanceProposal', async () => {
+        const signer = Wallet.fromMnemonic('test test test test test test test test test test test junk')
+                                .getAccount(0)
+                                .getPersona('alice')
+                                .getSigner();
+        const proposal = new GovernanceProposal({
+            title: 'Test Proposal',
+            description: 'A test proposal',
+        });
+        const signedProposal = await proposal.sign(signer);
+        expect(signedProposal.verifyAuthorizations()).toBe(true);
+        expect(signedProposal.isValid()).toBe(true);
+        expect(GovernanceProposal.fromUint8Array(signedProposal.toUint8Array()).toHash('hex')).toEqual(signedProposal.toHash('hex'));
     });
 });

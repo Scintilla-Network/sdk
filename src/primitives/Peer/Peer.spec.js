@@ -1,4 +1,3 @@
-// import {describe, it, expect} from "vitest";
 import {describe, it, expect} from "@scintilla-network/litest";
 import Peer from './Peer.js';
 

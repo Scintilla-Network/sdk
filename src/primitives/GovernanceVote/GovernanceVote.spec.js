@@ -1,6 +1,7 @@
 // import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
 import GovernanceVote from './GovernanceVote.js';
+import { Wallet } from '@scintilla-network/wallet';
 
 describe('GovernanceVote', () => {
     const voteOptions = {
@@ -64,6 +65,17 @@ describe('GovernanceVote', () => {
         expect(parsedProposalVote.toUint8Array()).toEqual(proposalVote.toUint8Array());
         expect(parsedProposalVote.toHash('hex')).toEqual('433851952352cd543678fe7c3ac5de9c3ee8ff51050a6f145b61bf551d505a87');
     });
-    
-    
+
+    it('should sign and verify a GovernanceVote', async () => {
+        const signer = Wallet.fromMnemonic('test test test test test test test test test test test junk')
+                                .getAccount(0)
+                                .getPersona('alice')
+                                .getSigner();
+
+        const proposalVote = new GovernanceVote(voteOptions);
+        const signedProposalVote = await proposalVote.sign(signer);
+        expect(signedProposalVote.verifyAuthorizations()).toBe(true);
+        expect(signedProposalVote.isValid()).toBe(true);
+        expect(GovernanceVote.fromUint8Array(signedProposalVote.toUint8Array()).toHash('hex')).toEqual(signedProposalVote.toHash('hex'));
+    });
 });

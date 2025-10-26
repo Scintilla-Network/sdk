@@ -20,7 +20,20 @@ function _computeChecksum(payload) {
 export class NetMessage {
     static NET_KINDS = NET_KINDS;
 
+    /**
+     * Create NetMessage
+     * @param {Object} props - The properties
+     * @param {Uint8Array} props.chain - The chain magic number
+     * @param {string} props.kind - The kind
+     * @param {number} props.version - The version
+     * @param {string} props.cluster - The cluster
+     * @param {Uint8Array} props.payload - The payload
+     */
     constructor(props = {}) {
+        /**
+         * The chain magic number
+         * @type {Uint8Array}
+         */
         this.chain = props.chain || CHAIN_SCINTILLA_1_MAGIC;
         if (!(this.chain instanceof Uint8Array)) {
             throw new Error("Chain magic number must be a Uint8Array");
@@ -43,6 +56,11 @@ export class NetMessage {
         this.signature = props.signature || null;
     }
 
+    /**
+     * Create NetMessage from Uint8Array
+     * @param {Uint8Array} array - The Uint8Array
+     * @returns {NetMessage} The NetMessage instance
+     */
     static fromUint8Array(array) {
         let offset = 0;
 
@@ -104,6 +122,10 @@ export class NetMessage {
         }); 
     }
 
+    /**
+     * Get the payload kind
+     * @returns {string} The payload kind
+     */
     getPayloadKind() {
         // Payload first bytes should be a kind, but might not always, then we "UNKNOWN" it. It might be misinterpreted as a kind too. 
         const kind = this.payload[0];
@@ -111,17 +133,30 @@ export class NetMessage {
         return kindString;
     }
 
+    /**
+     * Convert to payload kind instance
+     * @returns {Object} The payload kind instance
+     */
     toPayloadKindInstance() {
         const payloadKind = this.getPayloadKind();
         const constructor = kindToConstructor(payloadKind);
         return constructor.fromUint8Array(this.payload);
     }
 
+    /**
+     * Create NetMessage from hex
+     * @param {string} hex - The hex string
+     * @returns {NetMessage} The NetMessage instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return NetMessage.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Set the payload
+     * @param {Uint8Array} payload - The payload
+     */
     setPayload(payload) {
         if (payload && !(payload instanceof Uint8Array)) {
             throw new Error("Payload must be a Uint8Array");
@@ -130,6 +165,11 @@ export class NetMessage {
         this.length = estimateLength(this.payload || new Uint8Array(0));
     }
 
+    /**
+     * Sign the NetMessage
+     * @param {Signer} signer - The signer
+     * @returns {Uint8Array} The signature
+     */
     async sign(signer) {
         try {
             const signingMessage = new SignableMessage(this.toUint8Array());
@@ -142,10 +182,20 @@ export class NetMessage {
         
     }
 
+    /**
+     * Convert to hex
+     * @param {boolean} excludeSignature - Whether to exclude the signature
+     * @returns {string} The hex string
+     */
     toHex(excludeSignature = false) {
         return uint8array.toHex(this.toUint8Array(excludeSignature));
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {boolean} excludeSignature - Whether to exclude the signature
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(excludeSignature = false) {
         const chainMagicNumberUint8Array = this.chain;
 
@@ -181,12 +231,22 @@ export class NetMessage {
         return result;
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Verify the signature
+     * @param {string} publicKey - The public key
+     * @returns {boolean} True if the signature is valid
+     */
     verifySignature(publicKey) {
         const signingMessage = new SignableMessage(this.toUint8Array(true));
         return signingMessage.verify(this.signature, publicKey);

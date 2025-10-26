@@ -2,6 +2,15 @@ import { sha256} from '@scintilla-network/hashes/classic';
 import { uint8array, varint, varbigint }  from '@scintilla-network/keys/utils';
 
 export class ClusterBlockHeader {
+    /**
+     * Create ClusterBlockHeader
+     * @param {Object} options - The options
+     * @param {number} options.height - The height
+     * @param {BigInt} options.timestamp - The timestamp
+     * @param {Uint8Array} options.previousHash - The previous hash
+     * @param {string} options.proposer - The proposer
+     * @returns {ClusterBlockHeader} The ClusterBlockHeader instance
+     */
     constructor(options = {}) {
         this.height = options.height ?? 0;
         this.timestamp = options.timestamp ? BigInt(options.timestamp) : BigInt(Date.now());
@@ -9,6 +18,10 @@ export class ClusterBlockHeader {
         this.proposer = options.proposer ?? '';
     }
 
+    /**
+     * Convert to Uint8Array
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array() {
         const heightUint8Array = varint.encodeVarInt(this.height, 'uint8array');
         const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
@@ -29,12 +42,22 @@ export class ClusterBlockHeader {
         return result;
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Create ClusterBlockHeader from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {ClusterBlockHeader} The ClusterBlockHeader instance
+     */
     static fromUint8Array(inputArray) {
         let offset = 0;
 
@@ -63,6 +86,10 @@ export class ClusterBlockHeader {
         });
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             height: this.height,

@@ -1,5 +1,5 @@
 
 export interface IToHashOptions {
-    format?: 'hex' | 'buffer';
+    format?: 'hex' | 'uint8array';
     includePrivate?: boolean;
 }

@@ -1,4 +1,11 @@
 class FIFOLookupMap {
+    /**
+     * Create FIFOLookupMap
+     * @param {number} maxSize - The maximum size of the map
+     * @param {string} primaryKey - The primary key
+     * @param {Object[]} data - The data
+     * @returns {FIFOLookupMap} The FIFOLookupMap instance
+     */
     constructor(maxSize, primaryKey = "key", data = []) {
         this.maxSize = maxSize;
         this.primaryKey = primaryKey;
@@ -10,10 +17,19 @@ class FIFOLookupMap {
         });
     }
 
+    /**
+     * Create FIFOLookupMap from JSON
+     * @param {Object} json - The JSON object
+     * @returns {FIFOLookupMap} The FIFOLookupMap instance
+     */
     static fromJSON(json) {
         return new FIFOLookupMap(json.maxSize, json.primaryKey, json.data);
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             maxSize: this.maxSize,
@@ -22,10 +38,20 @@ class FIFOLookupMap {
         };
     }
 
+    /**
+     * Get a value by primary key
+     * @param {string} primaryKeyValue - The primary key value
+     * @returns {Object} The value
+     */
     get(primaryKeyValue) {
         return this.map.get(primaryKeyValue);
     }
 
+    /**
+     * Add a value to the map
+     * @param {Object} data - The data
+     * @returns {void}
+     */
     add(data) {
         const primaryKeyValue = this.getNestedProperty(data, this.primaryKey);
         if (primaryKeyValue === undefined) {
@@ -47,6 +73,12 @@ class FIFOLookupMap {
         }
     }
 
+    /**
+     * Get the last value by property name and value
+     * @param {string} propertyName - The property name
+     * @param {any} value - The value
+     * @returns {Object} The last value
+     */
     getLast(propertyName, value = undefined) {
         for (let i = this.order.length - 1; i >= 0; i--) {
             const key = this.order[i];
@@ -62,6 +94,11 @@ class FIFOLookupMap {
         return null;
     }
 
+    /**
+     * Remove a value by primary key
+     * @param {string} primaryKeyValue - The primary key value
+     * @returns {void}
+     */
     remove(primaryKeyValue) {
         const stringKey = String(primaryKeyValue);
         this.map.delete(stringKey);
@@ -71,6 +108,12 @@ class FIFOLookupMap {
         }
     }
 
+    /**
+     * Get a nested property
+     * @param {Object} obj - The object
+     * @param {string} path - The path
+     * @returns {any} The nested property
+     */
     getNestedProperty(obj, path) {
         const result = path.split('.').reduce((acc, part) => {
             return acc && typeof acc === 'object' ? acc[part] : undefined;

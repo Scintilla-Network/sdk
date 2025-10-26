@@ -23,6 +23,21 @@ function loadData(data) {
 }
 
 export class Voucher {
+    /**
+     * Create a new Voucher
+     * @param {Object} options - The options
+     * @param {number} options.version - The version
+     * @param {number} options.timestamp - The timestamp
+     * @param {string} options.hash - The hash
+     * @param {string} options.asset - The asset
+     * @param {Object[]} options.inputs - The inputs
+     * @param {Object} options.output - The output
+     * @param {Object[]} options.stack - The stack
+     * @param {Object[]} options.data - The data
+     * @param {Object} options.timelock - The timelock
+     * @param {Object[]} options.authorizations - The authorizations
+     * @returns {Voucher} The Voucher instance
+     */
     constructor({
         version = 1,
         timestamp,
@@ -55,6 +70,11 @@ export class Voucher {
     }
 
 
+    /**
+     * Convert a Uint8Array to a voucher
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Voucher} The voucher
+     */
     static fromUint8Array(inputArray) {
         let offset = 0;
 
@@ -153,10 +173,19 @@ export class Voucher {
         return new Voucher(props);
     }
 
+    /**
+     * Convert a hex string to a voucher
+     * @param {string} hex - The hex string
+     * @returns {Voucher} The voucher
+     */
     static fromHex(hex) {
         return Voucher.fromUint8Array(uint8array.fromHex(hex));
     }
-
+    /**
+     * Convert a JSON object to a voucher
+     * @param {Object} json - The JSON object
+     * @returns {Voucher} The voucher
+     */
     static fromJSON(json) {
         return new Voucher({
             ...json,
@@ -169,6 +198,12 @@ export class Voucher {
         });
     }
 
+    /**
+     * Convert the voucher to a Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -285,16 +320,35 @@ export class Voucher {
         return result;
     }
 
+    /**
+     * Convert the voucher to a hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = true} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert the voucher to a hex string
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {string} The hex string
+     */
     toHex( {excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
+    /**
+     * Convert the voucher to a JSON object
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - True if the authorizations should be excluded, false otherwise
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const json = {
             kind: this.kind,
@@ -324,6 +378,10 @@ export class Voucher {
         return json;
     }
 
+    /**
+     * Add an authorization to the voucher
+     * @param {Authorization} authorization - The authorization
+     */
     addAuthorization(authorization) {
         if(authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
@@ -334,6 +392,10 @@ export class Voucher {
         this.authorizations.push(authorization);
     }
 
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid, false otherwise
+     */
     verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
@@ -384,20 +446,38 @@ export class Voucher {
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the voucher is valid
+     * @returns {boolean} True if the voucher is valid, false otherwise
+     */
     isValid() {
         const {valid, error} = this.validate();
         return valid;
     }
 
-    isValidAtTime(currentTick) {
+    /**
+     * Check if the voucher is valid at a specific tick
+     * @param {bigint} currentTick - The current tick
+     * @returns {boolean} True if the voucher is valid at the specific tick, false otherwise
+     */
+    isValidAtTick(currentTick) {
         if (!this.timelock) return true;
+        if(this.timelock.startTick === 0n && this.timelock.endTick === 0n) return true;
         return currentTick >= this.timelock.startTick && currentTick <= this.timelock.endTick;
     }
 
+    /**
+     * Get the total input amount
+     * @returns {bigint} The total input amount
+     */
     getTotalInput() {
         return this.inputs.reduce((sum, input) => sum + BigInt(input.amount), 0n);
     }
 
+    /**
+     * Get the total output amount
+     * @returns {bigint} The total output amount
+     */
     getTotalOutput() {
         return BigInt(this.output.amount);
     }

@@ -1,27 +1,28 @@
 # Contributing to @scintilla/ts-sdk
 
-First off, thank you for considering contributing to @scintilla/ts-sdk! It's people like you that make the open-source community such a fantastic place to learn, inspire, and create. Any contributions you make will benefit everybody else and are greatly appreciated.
+First off, thank you for considering contributing to Scintilla Network !  
+Scintilla is purely open-source and community-driven, there is no VC, no central authority and no one is paid to work on the project, any help and contributions are greatly appreciated.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the @scintilla/ts-sdk Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [
+By participating, you are expected to uphold this code.  
 
-## I Don't Want to Read This Whole Thing I Just Have a Question!!!
+## I Don't Want to Read This Whole Thing I Just Have a Question!
 
 > Note: Please don't file an issue to ask a question. You'll get faster results by using the resources below.
-> We have an official chat message board (Discord) where the community can help you with your questions : [Scintilla Network](https://scintilla.network)
+> We have official message boards (Discord or Reddit) where the community can help you with your questions : [Scintilla Network](https://scintilla.network)
 
 ## How Can I Contribute?
 
 ### Reporting Bugs
 
-This section guides you through submitting a bug report for @scintilla/ts-sdk. Following these guidelines helps maintainers and the community understand your report 📝, reproduce the behavior 💻, and find related reports 🔎.
+Before creating bug reports, please check the open or closed issues to see if your issue has already been reported.  
+When you are creating a bug report, please include as many details as possible. This will help us reproduce the issue and fix it faster.
 
-Before creating bug reports, please check this list as you might find out that you don't need to create one. When you are creating a bug report, please include as many details as possible. Fill out the required template, the information it asks for helps us resolve issues faster.
+### Reporting Security Vulnerabilities
 
-### Suggesting Enhancements
-
-This section guides you through submitting an enhancement suggestion for @scintilla/ts-sdk, including completely new features and minor improvements to existing functionality. Following these guidelines helps maintainers and the community understand your suggestion 📝 and find related suggestions 🔎.
+If you discover a security vulnerability within Scintilla, please send an email to [security@scintilla.network](mailto:security@scintilla.network). All security vulnerabilities will be promptly addressed.  
+We hope to quickly be able to provide with a proper bounty program for security vulnerabilities, if we are not able immeditely, give us some time to set it up, we will do our best to reward your white hat efforts (we know how much work it is to find and report vulnerabilities).
 
 ### Your First Code Contribution
 
@@ -55,10 +56,6 @@ See [Pull Request Template](./.github/PULL_REQUEST_TEMPLATE.md)
 - Use semantic commit messages.
 - Ideally, use present imperative tense ("Add feature" not "Added feature" or "Adds feature").
 
-#### TypeScript Styleguide
-
-All TypeScript must adhere to TypeScript Standard Style.
-
 #### Documentation Styleguide
 
 - Use Markdown.
@@ -67,8 +64,6 @@ All TypeScript must adhere to TypeScript Standard Style.
 ### Additional Notes
 
 #### Issue and Pull Request Labels
-
-This section lists the labels we use to help us track and manage issues and pull requests.
 
 #### Type of Issue and Issue State
 

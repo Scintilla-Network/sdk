@@ -1,11 +1,5 @@
-// import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
 import { Authorization } from './Authorization.js';
-import { Signer, utils } from '@scintilla-network/keys';
-const { uint8array } = utils;
-
-
-import { Asset } from '../Asset/Asset.js';
 
 
 describe('Authorization', () => {
@@ -18,10 +12,10 @@ describe('Authorization', () => {
             address: 'sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c'
           });
 
-        // expect(auth.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
-        // expect(auth.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
-        // expect(auth.moniker).toBe('alice');
-        // expect(auth.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
+        expect(auth.signature).toBe('64ab7824f3c6d0da7479b47fefe10262779af4979d925b8e0718ddf4bc7c5a384eaeeee62bffaac972fac3a76ff8733d7e9558759a1bbda590da17279fdb1b1b');
+        expect(auth.publicKey).toBe('026a83ea6ea77020d1252e7a10b690d71a6d50fdcdc79c538ff58c0523fd632671');
+        expect(auth.moniker).toBe('alice');
+        expect(auth.address).toBe('sct1r36ayd6jvp5c3xyhwlx0x3qdq9pemcgn6jxn2c');
 
 
         const bytes = auth.toUint8Array();

@@ -1,14 +1,26 @@
+import { serialize, deserialize } from '@scintilla-network/serialize';
+import { uint8array, json, hex } from '@scintilla-network/keys/utils';
+import { SignableMessage } from '@scintilla-network/keys';
 import { sha256 } from '@scintilla-network/hashes/classic';
-import { uint8array, varint, varbigint, json } from '@scintilla-network/keys/utils';
+
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
-import makeDoc from '../../utils/makeDoc.js';
-// import signDoc from '../../utils/signDoc.js';
-// import verifyDoc from '../../utils/verifyDoc.js';
-import { SignableMessage } from '@scintilla-network/keys';
 
 class GovernanceProposal {
+    /**
+     * Create GovernanceProposal
+     * @param {Object} options - The options
+     * @param {number} options.timestamp - The timestamp
+     * @param {string} options.title - The title
+     * @param {string} options.description - The description
+     * @param {Object} options.funding - The funding
+     * @param {string} options.rules - The rules
+     */ 
     constructor(options = {}) {
+        /**
+         * The kind of the proposal
+         * @type {string}
+         */
         this.kind = 'GOVERNANCEPROPOSAL';
         this.version = 1;
         this.timestamp = options.timestamp ? BigInt(options.timestamp) : BigInt(Date.now());
@@ -33,112 +45,123 @@ class GovernanceProposal {
         this.proposer = options.proposer || '';
         this.dao = options.dao || '';
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: options.authorizations });
-        this.hash = options.hash ?? null;
-        if (!this.hash) {
-            this.hash = this.computeHash();
-        }
+        this.hash = this.toHash('uint8array', {excludeAuthorizations: true});
     }
 
-
+    /**
+     * Create GovernanceProposal from JSON
+     * @param {Object} json - The JSON object
+     * @returns {GovernanceProposal} The GovernanceProposal instance
+     */
     static fromJSON(json) {
         return new GovernanceProposal({
             ...json,
         });
     }
 
+    /**
+     * Create GovernanceProposal from hex
+     * @param {string} hex - The hex string
+     * @returns {GovernanceProposal} The GovernanceProposal instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return GovernanceProposal.fromUint8Array(uint8Array);
     }
 
 
+    /**
+     * Create GovernanceProposal from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {GovernanceProposal} The GovernanceProposal instance
+     */
     static fromUint8Array(inputArray) {
         const proposalProps = {};
         let offset = 0;
 
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: elementKind, length: elementKindLength} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += elementKindLength;
         if(elementKind !== NET_KINDS['GOVERNANCEPROPOSAL']) {
             throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['GOVERNANCEPROPOSAL']}(GOVERNANCEPROPOSAL)`);
         }
         proposalProps.kind = NET_KINDS_ARRAY[elementKind];
 
-        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: version, length: versionLength} = deserialize.toVarInt(inputArray.subarray(offset));
         proposalProps.version = version;
         offset += versionLength;
 
-        const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: timestamp, length: timestampBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         proposalProps.timestamp = timestamp;
         offset += timestampBytes;
 
         // Title
-        const {value: titleLength, length: titleLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: titleLength, length: titleLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += titleLengthBytes;
         proposalProps.title = uint8array.toString(inputArray.subarray(offset, offset + titleLength));
         offset += titleLength;
 
         // Description
-        const {value: descriptionLength, length: descriptionLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: descriptionLength, length: descriptionLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += descriptionLengthBytes;
         proposalProps.description = uint8array.toString(inputArray.subarray(offset, offset + descriptionLength));
         offset += descriptionLength;
 
         // Funding
-        const {value: fundingLength, length: fundingLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: fundingLength, length: fundingLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += fundingLengthBytes;
         const fundingString = uint8array.toString(inputArray.subarray(offset, offset + fundingLength));
         proposalProps.funding = json.parse(fundingString);
         offset += fundingLength;
 
         // Rules
-        const {value: rulesLength, length: rulesLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: rulesLength, length: rulesLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += rulesLengthBytes;
         const rulesString = uint8array.toString(inputArray.subarray(offset, offset + rulesLength));
         proposalProps.rules = json.parse(rulesString);
         offset += rulesLength;
 
         // Status
-        const {value: statusLength, length: statusLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: statusLength, length: statusLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += statusLengthBytes;
         proposalProps.status = uint8array.toString(inputArray.subarray(offset, offset + statusLength));
         offset += statusLength;
 
         // Votes
-        const {value: votesLength, length: votesLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: votesLength, length: votesLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += votesLengthBytes;
         const votesString = uint8array.toString(inputArray.subarray(offset, offset + votesLength));
         proposalProps.votes = json.parse(votesString);
         offset += votesLength;
 
         // Total Votes
-        const {value: totalVotes, length: totalVotesBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: totalVotes, length: totalVotesBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         proposalProps.totalVotes = totalVotes;
         offset += totalVotesBytes;
 
         // Start Date
-        const {value: startDate, length: startDateBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: startDate, length: startDateBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         proposalProps.startDate = startDate;
         offset += startDateBytes;
 
         // End Date
-        const {value: endDate, length: endDateBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: endDate, length: endDateBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         proposalProps.endDate = endDate;
         offset += endDateBytes;
 
         // Proposer
-        const {value: proposerLength, length: proposerLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: proposerLength, length: proposerLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += proposerLengthBytes;
         proposalProps.proposer = uint8array.toString(inputArray.subarray(offset, offset + proposerLength));
         offset += proposerLength;
 
         // DAO
-        const {value: daoLength, length: daoLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: daoLength, length: daoLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += daoLengthBytes;
         proposalProps.dao = uint8array.toString(inputArray.subarray(offset, offset + daoLength));
         offset += daoLength;
 
         // Hash
-        const {value: hashLength, length: hashLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: hashLength, length: hashLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += hashLengthBytes;
         proposalProps.hash = uint8array.toString(inputArray.subarray(offset, offset + hashLength));
         offset += hashLength;
@@ -150,6 +173,13 @@ class GovernanceProposal {
     }
 
 
+    /**
+     * Consider a vote
+     * @param {Object} options - The options
+     * @param {string} options.vote - The vote
+     * @param {string} options.voter - The voter
+     * @param {number} options.votingPower - The voting power
+     */
     considerVote({ vote, voter, votingPower }) {
         if(this.votes.find(v => v.voter === voter)) {
             // remove previous vote
@@ -160,6 +190,13 @@ class GovernanceProposal {
         this.totalVotes += normalizeVotingPower;
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -169,57 +206,57 @@ class GovernanceProposal {
         }
 
         const kind = NET_KINDS[this.kind];
-        const kindUint8Array = varint.encodeVarInt(kind, 'uint8array');
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
-        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
+        const {value: kindUint8Array, length: kindLengthUint8Array} = serialize.fromVarInt(kind, 'uint8array');
+        const {value: versionUint8Array, length: versionLengthUint8Array} = serialize.fromVarInt(this.version, 'uint8array');
+        const {value: timestampUint8Array, length: timestampLengthUint8Array} = serialize.fromVarBigInt(this.timestamp, 'uint8array');
 
         // Title
         const titleUint8Array = uint8array.fromString(this.title);
-        const titleLengthUint8Array = varint.encodeVarInt(titleUint8Array.length, 'uint8array');
+        const {value: titleLengthUint8Array, length: titleLengthUint8ArrayLength} = serialize.fromVarInt(titleUint8Array.length, 'uint8array');
 
         // Description
         const descriptionUint8Array = uint8array.fromString(this.description);
-        const descriptionLengthUint8Array = varint.encodeVarInt(descriptionUint8Array.length, 'uint8array');
+        const {value: descriptionLengthUint8Array, length: descriptionLengthUint8ArrayLength} = serialize.fromVarInt(descriptionUint8Array.length, 'uint8array');
 
         // Funding (as JSON)
         const fundingString = json.sortedJsonByKeyStringify(this.funding);
         const fundingUint8Array = uint8array.fromString(fundingString);
-        const fundingLengthUint8Array = varint.encodeVarInt(fundingUint8Array.length, 'uint8array');
+        const {value: fundingLengthUint8Array, length: fundingLengthUint8ArrayLength} = serialize.fromVarInt(fundingUint8Array.length, 'uint8array');
 
         // Rules (as JSON)
         const rulesString = json.sortedJsonByKeyStringify(this.rules);
         const rulesUint8Array = uint8array.fromString(rulesString);
-        const rulesLengthUint8Array = varint.encodeVarInt(rulesUint8Array.length, 'uint8array');
+        const {value: rulesLengthUint8Array, length: rulesLengthUint8ArrayLength} = serialize.fromVarInt(rulesUint8Array.length, 'uint8array');
 
         // Status
         const statusUint8Array = uint8array.fromString(this.status);
-        const statusLengthUint8Array = varint.encodeVarInt(statusUint8Array.length, 'uint8array');
+        const {value: statusLengthUint8Array, length: statusLengthUint8ArrayLength} = serialize.fromVarInt(statusUint8Array.length, 'uint8array');
 
         // Votes (as JSON)
         const votesString = json.sortedJsonByKeyStringify(this.votes);
         const votesUint8Array = uint8array.fromString(votesString);
-        const votesLengthUint8Array = varint.encodeVarInt(votesUint8Array.length, 'uint8array');
+        const {value: votesLengthUint8Array, length: votesLengthUint8ArrayLength} = serialize.fromVarInt(votesUint8Array.length, 'uint8array');
 
         // Total Votes
-        const totalVotesUint8Array = varint.encodeVarInt(this.totalVotes, 'uint8array');
+        const {value: totalVotesUint8Array, length: totalVotesUint8ArrayLength} = serialize.fromVarInt(this.totalVotes, 'uint8array');
 
         // Start Date
-        const startDateUint8Array = varbigint.encodeVarBigInt(this.startDate, 'uint8array');
+        const {value: startDateUint8Array, length: startDateUint8ArrayLength} = serialize.fromVarBigInt(this.startDate, 'uint8array');
 
         // End Date
-        const endDateUint8Array = varbigint.encodeVarBigInt(this.endDate, 'uint8array');
+        const {value: endDateUint8Array, length: endDateUint8ArrayLength} = serialize.fromVarBigInt(this.endDate, 'uint8array');
 
         // Proposer
         const proposerUint8Array = uint8array.fromString(this.proposer);
-        const proposerLengthUint8Array = varint.encodeVarInt(proposerUint8Array.length, 'uint8array');
+        const {value: proposerLengthUint8Array, length: proposerLengthUint8ArrayLength} = serialize.fromVarInt(proposerUint8Array.length, 'uint8array');
 
         // DAO
         const daoUint8Array = uint8array.fromString(this.dao);
-        const daoLengthUint8Array = varint.encodeVarInt(daoUint8Array.length, 'uint8array');
+        const {value: daoLengthUint8Array, length: daoLengthUint8ArrayLength} = serialize.fromVarInt(daoUint8Array.length, 'uint8array');
 
         // Hash
         const hashUint8Array = uint8array.fromString(this.hash);
-        const hashLengthUint8Array = varint.encodeVarInt(hashUint8Array.length, 'uint8array');
+        const {value: hashLengthUint8Array, length: hashLengthUint8ArrayLength} = serialize.fromVarInt(hashUint8Array.length, 'uint8array');
 
         // Authorizations
         let authorizationsUint8Array = new Uint8Array();
@@ -307,22 +344,29 @@ class GovernanceProposal {
         return result;
     }
 
+    /**
+     * Convert to hex
+     * @returns {string} The hex string
+     */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
-    computeHash() {
-        const uint8Array = this.toUint8Array();
-        const hashUint8Array = sha256(uint8Array);
-        return uint8array.toHex(hashUint8Array);
-    }
-
-    toHash(encoding = 'uint8array') {
-        const uint8Array = this.toUint8Array();
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
+    toHash(encoding = 'uint8array', {excludeAuthorizations = true} = {}) {
+        const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Add an authorization
+     * @param {Authorization} authorization - The authorization
+     */
     addAuthorization(authorization) {
         if(authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
@@ -330,34 +374,60 @@ class GovernanceProposal {
         this.authorizations.addAuthorization(new Authorization(authorization));
     }
 
-    verifyAuthorization() {
-        return this.authorizations.verify(this);
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid
+     */
+    verifyAuthorizations() {
+        return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
+    /**
+     * Convert to signable message
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {SignableMessage} The signable message
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
-    toDoc(signer) {
-        return makeDoc(this, signer);
-    }
-
+    /**
+     * Sign the proposal
+     * @param {Wallet} signer - The signer
+     * @returns {Promise<GovernanceProposal>} The signed proposal
+     */
     async sign(signer) {
-        this.authorizations.sign(this, signer);
+        let authorization = new Authorization();
+        const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
+        if(existingAuthorization){
+            this.authorizations.splice(this.authorizations.indexOf(existingAuthorization), 1);
+        }
+        authorization = await authorization.sign(this, signer, true);
+        this.authorizations.push(authorization);
         return this;
-        // return signDoc(await this.toDoc(signer));
     }
 
+    /**
+     * Convert to hex
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {string} The hex string
+     */
     toHex({excludeAuthorizations = false} = {}) {
         return uint8array.toHex(this.toUint8Array({excludeAuthorizations}));
     }
 
+    /**
+     * Validate the proposal
+     * @returns {Object} The validation result
+     */
     validate() {
-        if (!this.authorizations || this.authorizations.authorizations.length === 0) {
+        if (!this.authorizations || this.authorizations.length === 0) {
             return {valid: false, error: 'Authorizations are required.'};
         }
 
-        const signedAuthorizations = this.authorizations.authorizations.filter(auth => auth.signature);
+        const signedAuthorizations = this.authorizations.filter(auth => auth.signature);
         if (signedAuthorizations.length === 0) {
             return {valid: false, error: 'At least one authorization with signature is required.'};
         }
@@ -367,24 +437,34 @@ class GovernanceProposal {
             return {valid: false, error: 'At least one authorization with public key is required.'};
         }
 
-        if (!this.authorizations.verify(this)) {
-            return {valid: false, error: 'Invalid signature.'};
+        if (!this.verifyAuthorizations()) {
+            return {valid: false, error: 'Invalid authorization.'};
         }
 
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the proposal is valid
+     * @returns {boolean} True if the proposal is valid
+     */
     isValid() {
         const {valid, error} = this.validate();
         return valid;
     }
 
+    /**
+     * Convert to JSON
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const json = {
             kind: this.kind,
             version: this.version,
             timestamp: String(this.timestamp),
-            hash: this.hash,
+            hash: hex.fromUint8Array(this.hash),
             title: this.title,
             description: this.description,
             funding: this.funding,

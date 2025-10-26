@@ -1,10 +1,16 @@
-import { serialize } from '../../../utils/serialize/index.js';
-// import { deserialize } from '../../../utils/deserialize/index.js';
-import deserialize from '../../../utils/deserialize/index.js';
+import { serialize, deserialize } from '@scintilla-network/serialize';
 import { NET_KINDS, NET_KINDS_ARRAY } from "../NetMessage/NET_KINDS.js";
 import { Identity } from "../../Identity/Identity.js";
 
  export class PeerInfoMessage {
+    /**
+     * Create PeerInfoMessage
+     * @param {Object} props - The properties
+     * @param {string} props.quorum - The quorum
+     * @param {string} props.host - The host
+     * @param {number} props.port - The port
+     * @param {Identity} props.identity - The identity
+     */
     constructor(props = {}) {
 
         this.kind = 'PEERINFO';
@@ -17,6 +23,11 @@ import { Identity } from "../../Identity/Identity.js";
         // this.config = props.config;
     }
 
+    /**
+     * Create PeerInfoMessage from Uint8Array
+     * @param {Uint8Array} input - The Uint8Array
+     * @returns {PeerInfoMessage} The PeerInfoMessage instance
+     */
     static fromUint8Array(input) {
         let offset = 0;
         const { value: kindValue, length: kindLength } = deserialize.toVarInt(input.slice(0));
@@ -51,6 +62,10 @@ import { Identity } from "../../Identity/Identity.js";
         });
     }
 
+    /**
+     * Convert to Uint8Array
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array() {
         let totalLength = 0;
         const kindValue = NET_KINDS[this.kind]

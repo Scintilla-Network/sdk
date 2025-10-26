@@ -1,12 +1,9 @@
 import { sha256 } from "@scintilla-network/hashes/classic";
 import {SignableMessage} from "@scintilla-network/keys";
-import makeDoc from '../../utils/makeDoc.js';
-import { varint, uint8array, varbigint } from '@scintilla-network/keys/utils';
+import { uint8array } from '@scintilla-network/keys/utils';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
-// import { deserialize } from '../../utils/deserialize/index.js';
-import deserialize from '../../utils/deserialize/index.js';
-import { serialize } from '../../utils/serialize/index.js';
+import { serialize, deserialize } from '@scintilla-network/serialize';
 /**
  * @class QuorumDecisionVote
  * @description Represents a vote on a quorum decision, with support for signing and verifying multiple authorizations.
@@ -32,16 +29,31 @@ class QuorumDecisionVote {
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations });
     }
 
+    /**
+     * Create QuorumDecisionVote from JSON
+     * @param {Object} json - The JSON object
+     * @returns {QuorumDecisionVote} The QuorumDecisionVote instance
+     */
     static fromJSON(json) {
         return new QuorumDecisionVote({
             ...json,
         });
     }
 
+    /**
+     * Create QuorumDecisionVote from hex
+     * @param {string} hex - The hex string
+     * @returns {QuorumDecisionVote} The QuorumDecisionVote instance
+     */
     static fromHex(hex) {
         return QuorumDecisionVote.fromUint8Array(uint8array.fromHex(hex));
     }
 
+    /**
+     * Create QuorumDecisionVote from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {QuorumDecisionVote} The QuorumDecisionVote instance
+     */
     static fromUint8Array(inputArray) {
         const decisionProps = {};
 
@@ -93,6 +105,13 @@ class QuorumDecisionVote {
     }
 
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -185,9 +204,10 @@ class QuorumDecisionVote {
 
 
     /**
-     * Converts the QuorumDecisionVote instance to a JSON object.
-     * @param {boolean} [excludeAuthorizations = false] - Whether to exclude authorizations from the JSON.
-     * @returns {Object} The JSON representation of the instance.
+     * Convert to JSON
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {Object} The JSON object
      */
     toJSON({ excludeAuthorizations = false } = {}) {
         const obj = {
@@ -213,8 +233,8 @@ class QuorumDecisionVote {
      * @returns {string} The hex string representation of the instance.
      */
     toHex({ excludeAuthorizations = false } = {}) {
-        const buffer = this.toUint8Array({ excludeAuthorizations });
-        return uint8array.toHex(buffer);
+        const array = this.toUint8Array({ excludeAuthorizations });
+        return uint8array.toHex(array);
     }
 
     /**
@@ -250,10 +270,12 @@ class QuorumDecisionVote {
         return this;
     }
 
-    toDoc(signer) {
-        return makeDoc(this, signer);
-    }
-
+    /**
+     * Convert to SignableMessage
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude the authorizations
+     * @returns {SignableMessage} The SignableMessage instance
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
@@ -284,7 +306,7 @@ class QuorumDecisionVote {
 
     /**
      * Validates the QuorumDecisionVote instance.
-     * @returns {*}
+     * @returns {Object} The validation result
      */
     validate() {
         if (!this.decisionHash) {
@@ -319,6 +341,10 @@ class QuorumDecisionVote {
         return { valid: true, error: '' };
     }
 
+    /**
+     * Validates the QuorumDecisionVote instance.
+     * @returns {boolean} True if the QuorumDecisionVote instance is valid, false otherwise.
+     */
     isValid() {
         const { valid } = this.validate();
         return valid;

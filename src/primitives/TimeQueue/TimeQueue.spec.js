@@ -1,27 +1,25 @@
-// import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
 import TimeQueue from './TimeQueue.js';
-import { ITimeQueueItem } from './interfaces/ITimeQueueItem.js';
 
 describe('TimeQueue', () => {
     it('enqueues and dequeues items correctly', () => {
         const timeQueue = new TimeQueue();
         const now = Date.now();
 
-        const item1: ITimeQueueItem = { type: 'PROPOSAL_END', payload: { someData: 'test1' } };
-        const item2: ITimeQueueItem = { type: 'PROPOSAL_START', payload: { someData: 'test2' } };
+        const item1 = { type: 'PROPOSAL_END', payload: { someData: 'test1' } };
+        const item2 = { type: 'PROPOSAL_START', payload: { someData: 'test2' } };
 
         timeQueue.enqueue(now, item1);
         timeQueue.enqueue(now + 1000, item2);
 
         const dequeuedItems = timeQueue.dequeue(now);
 
-        expect(dequeuedItems).toContainEqual(item1);
+        expect(dequeuedItems).toEqual([item1]);
         expect(dequeuedItems).toHaveLength(1);
         expect(timeQueue.isEmpty()).toBe(false);
 
         const dequeuedItems2 = timeQueue.dequeue(now + 1000);
-        expect(dequeuedItems2).toContainEqual(item2);
+        expect(dequeuedItems2).toEqual([item2]);
         expect(dequeuedItems2).toHaveLength(1);
         expect(timeQueue.isEmpty()).toBe(true);
     });
@@ -59,6 +57,4 @@ describe('TimeQueue', () => {
         timeQueue.enqueue(now, { type: 'TEST', payload: {} });
         expect(timeQueue.isEmpty()).toBe(false);
     });
-
-    // Additional tests can be added here for edge cases, error conditions, etc.
 });

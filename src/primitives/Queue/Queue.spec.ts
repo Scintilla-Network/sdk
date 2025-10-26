@@ -1,4 +1,3 @@
-// import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
 import Queue from './Queue.js';
 
@@ -10,12 +9,12 @@ describe('Queue', () => {
 
         expect(queue.dequeue()).toBe(1);
         expect(queue.dequeue()).toBe(2);
-        expect(queue.dequeue()).toBeNull(); // Queue is empty
+        expect(queue.dequeue()).toBeNull();
     });
 
     it('peeks at the next item correctly', () => {
         const queue = new Queue<string>();
-        expect(queue.peek()).toBeNull(); // Queue is empty
+        expect(queue.peek()).toBeNull();
 
         queue.enqueue('first');
         queue.enqueue('second');

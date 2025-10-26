@@ -1,9 +1,8 @@
+import { uint8array, varint } from '@scintilla-network/keys/utils';
 import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from "@scintilla-network/keys";
-import { uint8array, varint } from '@scintilla-network/keys/utils';
-//@ts-ignore
 import Logger from 'hermodlog';
-import makeDoc from "../../utils/makeDoc.js";
+
 import {ClusterBlockHeader} from "./ClusterBlockHeader.js";
 import {ClusterBlockPayload} from "./ClusterBlockPayload.js";
 import { Authorization } from "../Authorization/Authorization.js";
@@ -13,6 +12,15 @@ const VALID_STATE_ACTIONS_KIND = ['TRANSFER', "TRANSACTION", "TRANSITION", "VOUC
 const VALID_ELEMENT_KINDS = ['HASHPROOF', ...VALID_STATE_ACTIONS_KIND];
 
 class ClusterBlock {
+    /**
+     * Create ClusterBlock
+     * @param {Object} options - The options
+     * @param {string} options.cluster - The cluster
+     * @param {Object} options.header - The header
+     * @param {Object} options.payload - The payload
+     * @param {Authorization[]} options.authorizations - The authorizations
+     * @returns {ClusterBlock} The ClusterBlock instance
+     */
     constructor(options = {}) {
         this.kind = 'CLUSTERBLOCK';
         this.version = 1;
@@ -23,11 +31,21 @@ class ClusterBlock {
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations: options.authorizations });
     }
 
+    /**
+     * Create ClusterBlock from hex string
+     * @param {string} hex - The hex string
+     * @returns {ClusterBlock} The ClusterBlock instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return this.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Create ClusterBlock from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {ClusterBlock} The ClusterBlock instance
+     */
     static fromUint8Array(inputArray) {
         let offset = 0;
 
@@ -73,6 +91,11 @@ class ClusterBlock {
         });
     }
 
+    /**
+     * Create ClusterBlock from JSON
+     * @param {Object} json - The JSON object
+     * @returns {ClusterBlock} The ClusterBlock instance
+     */
     static fromJSON(json) {
         const instance = new ClusterBlock({
             ...json,
@@ -82,12 +105,20 @@ class ClusterBlock {
         return instance;
     }
     
+    /**
+     * Convert to hex string
+     * @returns {string} The hex string
+     */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
 
-
+    /**
+     * Consider an element
+     * @param {Object} element - The element to consider
+     * @returns {boolean} True if the element was considered
+     */
     consider(element) {
         if (!element) {
             console.error('Block tried to consider an undefined element.');
@@ -104,6 +135,11 @@ class ClusterBlock {
         }
     }
 
+    /**
+     * Consider a HashProof
+     * @param {Object} hashProof - The HashProof to consider
+     * @returns {boolean} True if the HashProof was considered
+     */
     considerHashProof(hashProof) {
         const logger = new Logger().context('ClusterBlock').method('considerHashProof');
         logger.log(`Considering HashProof with ${hashProof.payload.data.length} elements`);
@@ -136,6 +172,11 @@ class ClusterBlock {
         return true;
     }
 
+    /**
+     * Consider a state action
+     * @param {Object} element - The state action to consider
+     * @returns {boolean} True if the state action was considered
+     */
     considerStateAction(element) {
         const logger = new Logger().context('ClusterBlock').method('considerStateAction');
         logger.log(`Considering state action ${element.kind}`);
@@ -161,6 +202,13 @@ class ClusterBlock {
     }
 
    
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude authorizations
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeAuthorizations === undefined) {
             options.excludeAuthorizations = false;
@@ -212,16 +260,33 @@ class ClusterBlock {
         return result;
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude authorizations
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
     }
 
+    /**
+     * Convert to string
+     * @returns {string} The string
+     */
     toString() {
         return uint8array.toHex(this.toUint8Array());
     }
   
+    /**
+     * Convert to JSON
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude authorizations
+     * @returns {Object} The JSON object
+     */
     toJSON({excludeAuthorizations = false} = {}) {
         const obj = {
             kind: this.kind,
@@ -238,31 +303,48 @@ class ClusterBlock {
         return obj;
     }
 
+    /**
+     * Check if the block is frozen
+     * @returns {boolean} True if the block is frozen
+     */
     isFrozen() {
         // Placeholder for isFrozen logic
         return false;
     }
 
+    /**
+     * Check if the block is open
+     * @returns {boolean} True if the block is open
+     */
     isOpen() {
         // return true if block is between timestamp - 1m and timestamp -7 s
         return new Date().getTime() - this.header.timestamp < 60000 && !this.isFrozen() && !this.isVoting();
     }
 
+    /**
+     * Check if the block is voting
+     * @returns {boolean} True if the block is voting
+     */
     isVoting() {
         // return true if block is between timestamp - 5s and timestamp
         return new Date().getTime() - this.header.timestamp < 5000;
     }
 
-    toDoc(signer){
-        return makeDoc(this, signer);   
-    }
-
+    /**
+     * Convert to SignableMessage
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeAuthorizations - Whether to exclude authorizations
+     * @returns {SignableMessage} The SignableMessage
+     */
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
     }
 
-
-   
+    /**
+     * Add an authorization
+     * @param {Object} authorization - The authorization to add
+     * @returns {void}
+     */
     addAuthorization(authorization) {
         if(authorization.signature === '' || authorization.signature === undefined){
             throw new Error('Signature is required for authorization.');
@@ -270,10 +352,19 @@ class ClusterBlock {
         this.authorizations.push(authorization);
     }
 
+    /**
+     * Verify the authorizations
+     * @returns {boolean} True if the authorizations are valid
+     */
     verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
+    /**
+     * Sign the block
+     * @param {Object} signer - The signer
+     * @returns {ClusterBlock} The signed block
+     */
     async sign(signer) {
         let authorization = new Authorization();
         const existingAuthorization = this.authorizations.find(auth => auth.moniker === signer.getMoniker());
@@ -285,6 +376,10 @@ class ClusterBlock {
         return this;
     }
 
+    /**
+     * Validate the block
+     * @returns {Object} The validation result
+     */
     validate() {
         if (!this.authorizations) return {valid: false, error: 'Authorizations are required.'};
 
@@ -302,6 +397,10 @@ class ClusterBlock {
         return {valid: true, error: ''};
     }
 
+    /**
+     * Check if the block is valid
+     * @returns {boolean} True if the block is valid
+     */
     isValid() {
         const logger = new Logger().context('ClusterBlock').method('isValid');
         logger.log('Checking if block is valid...');

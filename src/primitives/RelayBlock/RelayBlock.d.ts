@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { RelayBlockHeader } from './RelayBlockHeader.js';
 import {RelayBlockPayload} from "./RelayBlockPayload.js";
 import { IRelayBlockOptions } from './interfaces/IRelayBlockOptions.js';
@@ -20,12 +19,12 @@ export declare class RelayBlock {
     toUint8Array(options?: { excludeAuthorizations?: boolean }): Uint8Array;
     addAuthorization(authorization: ITransactionAuthorization): void;
     sign(signer: any): Promise<any>;
-    toBuffer(options?: { excludeAuthorizations?: boolean }): Buffer;
+    toUint8Array(options?: { excludeAuthorizations?: boolean }): Uint8Array;
     toHex(options?: { excludeAuthorizations?: boolean }): string;
-    static fromBuffer(buffer: Buffer): RelayBlock;
+    static fromUint8Array(uint8Array: Uint8Array): RelayBlock;
     static fromHex(hex: string): RelayBlock;
     toJSON(options?: { excludeAuthorizations?: boolean }): object;
-    toHash(encoding?: BufferEncoding, options?: { excludeAuthorizations?: boolean }): string | Buffer;
+    toHash(encoding?: 'uint8array' | 'hex', options?: { excludeAuthorizations?: boolean }): string | Uint8Array;
     toDoc(signer: any): any;
     validate(): {error: string, valid: boolean};
     isValid(): boolean;

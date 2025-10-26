@@ -1,11 +1,19 @@
 import { sha256 } from '@scintilla-network/hashes/classic';
 
-import { utils } from '@scintilla-network/keys';
-const { json, uint8array, varint } = utils;
+import { json, uint8array, varint } from '@scintilla-network/keys/utils';
 const { encodeVarInt, decodeVarInt } = varint;
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 // Maximum length of a moniker is 64 characters
 class Identity {
+    /**
+     * Create Identity
+     * @param {Object} options - The options
+     * @param {string} options.parent - The parent
+     * @param {string} options.moniker - The moniker
+     * @param {Object} options.records - The records
+     * @param {Object[]} options.members - The members
+     * @returns {Identity} The Identity instance
+     */
     constructor(options = {}) {
         this.kind = 'IDENTITY';
         // very like we are trying to create a 'sct' parent, but null might be passed as value, so we need to check for undefined
@@ -17,6 +25,11 @@ class Identity {
         options.members?.forEach(member => this.setMember(member));
     }
 
+    /**
+     * Create Identity from JSON
+     * @param {Object} json - The JSON object
+     * @returns {Identity} The Identity instance
+     */
     static fromJSON(json) {
         return new Identity({
             parent: json.parent,
@@ -26,11 +39,21 @@ class Identity {
         });
     }
 
+    /**
+     * Create Identity from hex
+     * @param {string} hex - The hex string
+     * @returns {Identity} The Identity instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return Identity.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Create Identity from Uint8Array
+     * @param {Uint8Array} array - The Uint8Array
+     * @returns {Identity} The Identity instance
+     */
     static fromUint8Array(array) {
         let offset = 0;
 
@@ -79,6 +102,11 @@ class Identity {
         });
     }
 
+    /**
+     * Set the moniker
+     * @param {string} moniker - The moniker
+     * @returns {string} The moniker
+     */
     setMoniker(moniker) {
         const monikerRegex = /^[a-z0-9_-]+$/;
         // If moniker is alphanumeric, hyphens, or underscores and not exceed 64 characters
@@ -113,6 +141,11 @@ class Identity {
         throw new Error(`Moniker must be alphanumeric, hyphens, or underscores and not exceed 64 characters - ${moniker}`);
     }
 
+    /**
+     * Get a member
+     * @param {string} identifier - The identifier
+     * @returns {Object} The member
+     */
     getMember(identifier) {
         const findMember = this.members.find(member => member[0] === identifier);
         if (findMember) {
@@ -122,6 +155,10 @@ class Identity {
         return null;
     }
 
+    /**
+     * Set a member
+     * @param {Object} member - The member
+     */
     setMember(member) {
         // We are still pondering if we should reinitiate the non-voting power down below.
         // It has the equivalent of a distribution value (no right, but still involved to distribution of rewards - such as a stakeWeight not a stakePermitWeight)
@@ -152,6 +189,11 @@ class Identity {
         this.members.sort((a, b) => a[0].localeCompare(b[0]));
     }
 
+    /**
+     * Set a record
+     * @param {string} key - The key
+     * @param {any} value - The value
+     */
     setRecord(key, value) {
         const keys = key.split('.');
         let current = this.records;
@@ -168,10 +210,18 @@ class Identity {
         current[keys[keys.length - 1]] = value;
     }
 
+    /**
+     * Get the full moniker
+     * @returns {string} The full moniker
+     */
     getFullMoniker() {
         return this.parent ? `${this.parent}.${this.moniker}` : this.moniker;
     }
 
+    /**
+     * Convert to store
+     * @returns {Object} The store
+     */
     toStore() {
         const store = {};
 
@@ -182,10 +232,18 @@ class Identity {
         return store;
     }
 
+    /**
+     * Get the moniker
+     * @returns {string} The moniker
+     */
     getMoniker() {
         return this.getFullMoniker();
     }
 
+    /**
+     * Convert to JSON
+     * @returns {Object} The JSON object
+     */
     toJSON() {
         return {
             kind: this.kind,
@@ -196,6 +254,12 @@ class Identity {
         };
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
@@ -244,10 +308,19 @@ class Identity {
         return result;
     }
 
+    /**
+     * Convert to hex
+     * @returns {string} The hex string
+     */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);

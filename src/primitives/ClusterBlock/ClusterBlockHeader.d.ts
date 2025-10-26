@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import { IClusterBlockHeaderOptions } from './interfaces/IClusterBlockHeaderOptions.js';
 
 export declare class ClusterBlockHeader {
@@ -11,9 +10,9 @@ export declare class ClusterBlockHeader {
 
     constructor(options?: IClusterBlockHeaderOptions);
 
-    toBuffer(): Buffer;
-    toHash(encoding?: BufferEncoding): string;
-    static fromBuffer(buffer: Buffer): ClusterBlockHeader;
+    toUint8Array(): Uint8Array;
+    toHash(encoding?: 'uint8array' | 'hex'): string;
+    static fromUint8Array(uint8Array: Uint8Array): ClusterBlockHeader;
     toJSON(): object;
 }
 

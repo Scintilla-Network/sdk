@@ -1,4 +1,9 @@
 class Peer {
+    /**
+     * Create Peer from string
+     * @param {string} uri - The URI
+     * @returns {Peer} The Peer instance
+     */
     static fromString(uri) {
         if(!uri?.includes('http') && !uri?.includes('https')) {
             uri = `http://${uri}`;
@@ -9,6 +14,13 @@ class Peer {
             port
         })
     }
+
+    /**
+     * Create Peer
+     * @param {Object} props - The properties
+     * @param {string} props.hostname - The hostname
+     * @param {number} props.port - The port
+     */
     constructor(props) {
         if(typeof props === 'string') {
             return Peer.fromString(props);
@@ -25,7 +37,11 @@ class Peer {
         this.services = {};
     }
 
-    async synchronize(){
+    /**
+     * Synchronize the peer
+     * @returns {Promise<void>}
+     */
+    async synchronize() {
         // Connect
         // Ask for peers, identity and more
         this.services['scintilla'] = {

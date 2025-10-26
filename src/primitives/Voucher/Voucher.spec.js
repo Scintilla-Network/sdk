@@ -180,9 +180,9 @@ describe('Voucher', () => {
             }
         });
 
-        expect(voucher.isValidAtTime(now)).toBe(true);
-        expect(voucher.isValidAtTime(now + 2000n)).toBe(false);
-        expect(voucher.isValidAtTime(now - 2000n)).toBe(false);
+        expect(voucher.isValidAtTick(now)).toBe(true);
+        expect(voucher.isValidAtTick(now + 2000n)).toBe(false);
+        expect(voucher.isValidAtTick(now - 2000n)).toBe(false);
     });
 
     it('should handle buffer conversions correctly', () => {

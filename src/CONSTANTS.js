@@ -1,5 +1,3 @@
-import { Buffer } from 'buffer';
-
 // Magic number for the Scintilla Chain
 export const CHAIN_SCINTILLA_1_MAGIC = new Uint8Array([0xa1, 0xd6, 0x91, 0xa8]);
 

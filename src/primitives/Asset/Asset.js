@@ -1,7 +1,8 @@
+import { deserialize, serialize } from '@scintilla-network/serialize';
+import { uint8array, json } from '@scintilla-network/keys/utils';
 import { sha256 } from '@scintilla-network/hashes/classic';
-import { varbigint, uint8array, varint, json } from '@scintilla-network/keys/utils';
-import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 
+import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 /**
  * Asset class
  * @description The Asset class represents a digital or physical asset in a system, providing a structured way to define and interact with assets.
@@ -67,6 +68,11 @@ class Asset {
         this.metadata = metadata ?? {};
     }
 
+    /**
+     * Create Asset from JSON
+     * @param {Object} json - The JSON object
+     * @returns {Asset} The Asset instance
+     */
     static fromJSON(json) {
         return new Asset({
             ...json,
@@ -74,11 +80,16 @@ class Asset {
     }
 
 
+    /**
+     * Create Asset from Uint8Array
+     * @param {Uint8Array} inputArray - The Uint8Array
+     * @returns {Asset} The Asset instance
+     */
     static fromUint8Array(inputArray) {
         const assetProps = {};
         let offset = 0;
 
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: elementKind, length: elementKindLength} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += elementKindLength;
         if(elementKind !== NET_KINDS['ASSET']) {
             throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['ASSET']}(ASSET)`);
@@ -86,7 +97,7 @@ class Asset {
         assetProps.kind = NET_KINDS_ARRAY[elementKind];
 
         // Name
-        const {value: nameLength, length: nameLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: nameLength, length: nameLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += nameLengthBytes;
         assetProps.name = uint8array.toString(inputArray.subarray(offset, offset + nameLength));
         offset += nameLength;
@@ -94,17 +105,17 @@ class Asset {
 
 
         // Symbol
-        const {value: symbolLength, length: symbolLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: symbolLength, length: symbolLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += symbolLengthBytes;
         assetProps.symbol = uint8array.toString(inputArray.subarray(offset, offset + symbolLength));
         offset += symbolLength;
 
         // Supply
-        const {value: supplyMax, length: supplyMaxBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: supplyMax, length: supplyMaxBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += supplyMaxBytes;
-        const {value: supplyTotal, length: supplyTotalBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: supplyTotal, length: supplyTotalBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += supplyTotalBytes;
-        const {value: supplyCirculating, length: supplyCirculatingBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: supplyCirculating, length: supplyCirculatingBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += supplyCirculatingBytes;
         assetProps.supply = {
             max: supplyMax,
@@ -114,38 +125,38 @@ class Asset {
 
 
         // Decimals
-        const {value: decimals, length: decimalsBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: decimals, length: decimalsBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         assetProps.decimals = decimals;
         offset += decimalsBytes;
 
         // Consensus
-        const {value: consensusLength, length: consensusLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: consensusLength, length: consensusLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += consensusLengthBytes;
         const consensusString = uint8array.toString(inputArray.subarray(offset, offset + consensusLength));
         assetProps.consensus = json.parse(consensusString);
         offset += consensusLength;
 
         // Distributions
-        const {value: distributionsLength, length: distributionsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: distributionsLength, length: distributionsLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += distributionsLengthBytes;
         const distributionsString = uint8array.toString(inputArray.subarray(offset, offset + distributionsLength));
         assetProps.distributions = json.parse(distributionsString);
         offset += distributionsLength;
 
         // Permissions
-        const {value: permissionsLength, length: permissionsLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: permissionsLength, length: permissionsLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += permissionsLengthBytes;
         const permissionsString = uint8array.toString(inputArray.subarray(offset, offset + permissionsLength));
         assetProps.permissions = json.parse(permissionsString);
         offset += permissionsLength;
 
         // Fees
-        const { value: feeAmount, length: feeAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const { value: feeAmount, length: feeAmountBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += feeAmountBytes;
 
         assetProps.fees = [];
         for (let i = 0; i < feeAmount; i++) {
-            const {value: feeLength, length: feeLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+            const {value: feeLength, length: feeLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
             offset += feeLengthBytes;
             const feeString = uint8array.toString(inputArray.subarray(offset, offset + feeLength));
             offset += feeLength;
@@ -153,7 +164,7 @@ class Asset {
         }
 
         // Metadata
-        const {value: metadataLength, length: metadataLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: metadataLength, length: metadataLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += metadataLengthBytes;
         const metadataString = uint8array.toString(inputArray.subarray(offset, offset + metadataLength));
         assetProps.metadata = json.parse(metadataString);
@@ -162,57 +173,68 @@ class Asset {
         return new Asset(assetProps);
     }
 
+    /**
+     * Create Asset from hex string
+     * @param {string} hex - The hex string
+     * @returns {Asset} The Asset instance
+     */
     static fromHex(hex) {
         const uint8Array = uint8array.fromHex(hex);
         return Asset.fromUint8Array(uint8Array);
     }
 
+    /**
+     * Convert to Uint8Array
+     * @param {Object} options - The options
+     * @param {boolean} options.excludeKindPrefix - Whether to exclude the kind prefix
+     * @returns {Uint8Array} The Uint8Array
+     */
     toUint8Array(options = {}) {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
         }
 
         const kind = NET_KINDS['ASSET'];
-        const elementKindUint8Array = varint.encodeVarInt(kind, 'uint8array');
+        const {value: elementKindUint8Array, length: elementKindUint8ArrayLength} = serialize.fromVarInt(kind);
 
         // Name
         const nameUint8Array = uint8array.fromString(this.name);
-        const nameLengthUint8Array = varint.encodeVarInt(nameUint8Array.length, 'uint8array');
+        const {value: nameLengthUint8Array, length: nameLengthUint8ArrayLength} = serialize.fromVarInt(nameUint8Array.length);
 
         // Symbol
         const symbolUint8Array = uint8array.fromString(this.symbol);
-        const symbolLengthUint8Array = varint.encodeVarInt(symbolUint8Array.length, 'uint8array');
+        const {value: symbolLengthUint8Array, length: symbolLengthUint8ArrayLength} = serialize.fromVarInt(symbolUint8Array.length);
 
         // Supply (max, total, circulating as BigInt)
-        const supplyMaxUint8Array = varbigint.encodeVarBigInt(this.supply.max, 'uint8array');
-        const supplyTotalUint8Array = varbigint.encodeVarBigInt(this.supply.total, 'uint8array');
-        const supplyCirculatingUint8Array = varbigint.encodeVarBigInt(this.supply.circulating, 'uint8array');
+        const {value: supplyMaxUint8Array, length: supplyMaxUint8ArrayLength} = serialize.fromVarBigInt(this.supply.max);
+        const {value: supplyTotalUint8Array, length: supplyTotalUint8ArrayLength} = serialize.fromVarBigInt(this.supply.total);
+        const {value: supplyCirculatingUint8Array, length: supplyCirculatingUint8ArrayLength} = serialize.fromVarBigInt(this.supply.circulating);
 
         // Decimals
-        const decimalsUint8Array = varint.encodeVarInt(this.decimals, 'uint8array');
+        const {value: decimalsUint8Array, length: decimalsUint8ArrayLength} = serialize.fromVarInt(this.decimals);
 
         // Consensus (as JSON)
         const consensusString = json.sortedJsonByKeyStringify(this.consensus);
         const consensusUint8Array = uint8array.fromString(consensusString);
-        const consensusLengthUint8Array = varint.encodeVarInt(consensusUint8Array.length, 'uint8array');
+        const {value: consensusLengthUint8Array, length: consensusLengthUint8ArrayLength} = serialize.fromVarInt(consensusUint8Array.length);
 
         // Distributions (as JSON)
         const distributionsString = json.sortedJsonByKeyStringify(this.distributions);
         const distributionsUint8Array = uint8array.fromString(distributionsString);
-        const distributionsLengthUint8Array = varint.encodeVarInt(distributionsUint8Array.length, 'uint8array');
+        const {value: distributionsLengthUint8Array, length: distributionsLengthUint8ArrayLength} = serialize.fromVarInt(distributionsUint8Array.length);
 
         // Permissions (as JSON)
         const permissionsString = json.sortedJsonByKeyStringify(this.permissions);
         const permissionsUint8Array = uint8array.fromString(permissionsString);
-        const permissionsLengthUint8Array = varint.encodeVarInt(permissionsUint8Array.length, 'uint8array');
+        const {value: permissionsLengthUint8Array, length: permissionsLengthUint8ArrayLength} = serialize.fromVarInt(permissionsUint8Array.length);
 
         // Fees (as JSON)
-        const feesAmountUint8Array = varint.encodeVarInt(this.fees.length, 'uint8array');
+        const {value: feesAmountUint8Array, length: feesAmountUint8ArrayLength} = serialize.fromVarInt(this.fees.length);
         const feesUint8Array = [];
         for(let i = 0; i < this.fees.length; i++) {
             const fee = this.fees[i];
             const feeString = json.stringify(fee);
-            const feeLengthUint8Array = varint.encodeVarInt(feeString.length, 'uint8array');
+            const {value: feeLengthUint8Array, length: feeLengthUint8ArrayLength} = serialize.fromVarInt(feeString.length);
             const feeUint8Array = uint8array.fromString(feeString);
             feesUint8Array.push(...feeLengthUint8Array, ...feeUint8Array);
         }
@@ -220,7 +242,7 @@ class Asset {
         // Metadata (as JSON)
         const metadataString = json.sortedJsonByKeyStringify(this.metadata);
         const metadataUint8Array = uint8array.fromString(metadataString);
-        const metadataLengthUint8Array = varint.encodeVarInt(metadataUint8Array.length, 'uint8array');
+        const {value: metadataLengthUint8Array, length: metadataLengthUint8ArrayLength} = serialize.fromVarInt(metadataUint8Array.length);
 
         const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length)
             + nameLengthUint8Array.length + nameUint8Array.length
@@ -280,10 +302,19 @@ class Asset {
     }
 
 
+    /**
+     * Convert to hex string
+     * @returns {string} The hex string
+     */
     toHex() {
         return uint8array.toHex(this.toUint8Array());
     }
 
+    /**
+     * Convert to hash
+     * @param {string} encoding - The encoding
+     * @returns {string} The hash
+     */
     toHash(encoding = 'uint8array') {
         const uint8Array = this.toUint8Array();
         const hashUint8Array = sha256(uint8Array);

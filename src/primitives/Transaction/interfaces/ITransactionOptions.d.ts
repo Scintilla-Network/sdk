@@ -1,4 +1,4 @@
-import { ITimelock } from "../../TimeLock/interfaces/ITimeLock.js";
+import { ITimelock } from "../../../../types/TimeLock/interfaces/ITimeLock.js";
 import {ITransactionAuthorization} from "./ITransactionAuthorization.js";
 import {ITransactionFee} from "./ITransactionFee.js";
 

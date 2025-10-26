@@ -3,7 +3,7 @@ import {ITransitionOptions} from "./interfaces/ITransitionOptions.js";
 import {ITransitionAuthorization} from "./interfaces/ITransitionAuthorization.js";
 import {ITransitionFee} from "./interfaces/ITransitionFee.js";
 import {ITransactionAuthorization} from "../Transaction/interfaces/ITransactionAuthorization.js";
-import { ITimelock } from '../TimeLock/interfaces/ITimeLock.js';
+import { ITimelock } from '../../../types/TimeLock/interfaces/ITimeLock.js';
 
 export declare class Transition {
     version: number;

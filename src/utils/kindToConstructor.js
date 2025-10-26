@@ -6,7 +6,6 @@ import { Asset } from '../primitives/Asset/Asset.js';
 import { Identity } from '../primitives/Identity/Identity.js';
 import { Instruction } from '../primitives/Instruction/Instruction.js';
 import { RelayBlock } from '../primitives/RelayBlock/RelayBlock.js';
-import { StateActionData } from '../primitives/StateActionData/StateActionData.js';
 import { GovernanceProposal } from '../primitives/GovernanceProposal/GovernanceProposal.js';
 import { GovernanceVote } from '../primitives/GovernanceVote/GovernanceVote.js';
 import { PeerInfoMessage } from '../primitives/messages/PeerInfoMessage/PeerInfoMessage.js';
@@ -31,8 +30,6 @@ function kindToConstructor(kind) {
             return Instruction;
         case 'RELAYBLOCK':
             return RelayBlock;
-        // case 'STATEACTIONDATA':
-            // return StateActionData;
         case 'GOVERNANCEPROPOSAL':
             return GovernanceProposal;
         case 'GOVERNANCEVOTE':
