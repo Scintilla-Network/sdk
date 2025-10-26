@@ -2,18 +2,16 @@
 
 The `@scintilla-network/sdk` provides a comprehensive suite of TypeScript primitives and utilities designed for building and interacting with the Scintilla blockchain. This SDK simplifies the development process by offering well-defined structures for assets, governance, transactions, and more, alongside essential utilities for hashing and variable-length integer handling.
 
+[![npm version](https://badge.fury.io/js/@scintilla-network%2Fsdk.svg)](https://www.npmjs.com/package/@scintilla-network/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
 ### Installation
 
 To install the SDK in your project, run:
 
 ```bash
 npm install @scintilla-network/sdk
-```
-
-or if you are using yarn:
-
-```bash
-yarn add @scintilla-network/sdk
 ```
 
 #### Primitives
@@ -154,6 +152,14 @@ Refer to the individual documentation for each primitive and utility for detaile
     console.log(new Asset('test'));
 </script>
 ```
+
+## Related Packages
+
+- [@scintilla-network/hashes](https://www.npmjs.com/package/@scintilla-network/hashes)
+- [@scintilla-network/keys](https://www.npmjs.com/package/@scintilla-network/keys)
+- [@scintilla-network/trees](https://www.npmjs.com/package/@scintilla-network/trees)
+
+
 ### Contributing
 
 We welcome contributions to the `@scintilla-network/sdk`! Please read our [Contributing Guide](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
