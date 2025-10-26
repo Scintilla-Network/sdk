@@ -1,13 +1,10 @@
-import { sha256  } from '@scintilla-network/hashes/classic';
-import { uint8array, varint, varbigint } from '@scintilla-network/keys/utils';
+import { uint8array } from '@scintilla-network/keys/utils';
+import { serialize, deserialize } from '@scintilla-network/serialize';
+import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from '@scintilla-network/keys';
 
-import makeDoc from '../../utils/makeDoc.js';
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
-import { serialize } from '../../utils/serialize/index.js';
-// import { deserialize } from '../../utils/deserialize/index.js';
-import deserialize from '../../utils/deserialize/index.js';
 import { kindToConstructor } from '../../utils/kindToConstructor.js';
 
 function loadData(data) {
@@ -54,14 +51,14 @@ export class Voucher {
 
         this.timelock = {startTick: BigInt(timelock?.startTick ?? 0), endTick: BigInt(timelock?.endTick ?? 0)};
         this.authorizations = Authorization.fromAuthorizationsJSON({ authorizations });
-        this.hash = hash ?? this.computeHash();
+        this.hash = hash ?? this.toHash('hex');
     }
 
 
     static fromUint8Array(inputArray) {
         let offset = 0;
 
-        const {value: elementKind, length: elementKindBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: elementKind, length: elementKindBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += elementKindBytes;
         if(elementKind !== NET_KINDS['VOUCHER']) {
             throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['VOUCHER']}(VOUCHER)`);
@@ -69,30 +66,30 @@ export class Voucher {
 
         const kind = NET_KINDS_ARRAY[elementKind];
 
-        const {value: version, length: versionBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: version, length: versionBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += versionBytes;
         if(version !== 1) {
             throw new Error(`Invalid version: ${version} - Expected: 1`);
         }
 
-        const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const { value: timestamp, length: timestampBytes } = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += timestampBytes;
 
-        const {value: assetLength, length: assetLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const { value: assetLength, length: assetLengthBytes } = deserialize.toVarInt(inputArray.subarray(offset));
         offset += assetLengthBytes;
 
         const asset = uint8array.toString(inputArray.subarray(offset, offset + assetLength));
         offset += assetLength;
 
-        const {value: inputsAmount, length: inputsAmountBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const { value: inputsAmount, length: inputsAmountBytes } = deserialize.toVarInt(inputArray.subarray(offset));
         offset += inputsAmountBytes;
 
         const inputs = [];
         for (let i = 0; i < inputsAmount; i++) {
-            const {value: inputAmount, length: inputAmountBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+            const { value: inputAmount, length: inputAmountBytes } = deserialize.toVarBigInt(inputArray.subarray(offset));
             offset += inputAmountBytes;
 
-            const inputHashLength = varint.decodeVarInt(inputArray.subarray(offset));
+            const inputHashLength = deserialize.toVarInt(inputArray.subarray(offset));
             offset += inputHashLength.length
             const inputHash = uint8array.toHex(inputArray.subarray(offset, offset + inputHashLength.value));
             offset += inputHashLength.value;   
@@ -101,10 +98,10 @@ export class Voucher {
         }
      
         
-        const {value: outputAmount, length: outputAmountBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const { value: outputAmount, length: outputAmountBytes } = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += outputAmountBytes;
 
-        const {value: outputRecipientLengthValue, length: outputRecipientLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const { value: outputRecipientLengthValue, length: outputRecipientLengthBytes } = deserialize.toVarInt(inputArray.subarray(offset));
         offset += outputRecipientLengthBytes;
 
         const outputRecipient = inputArray.subarray(offset, offset + outputRecipientLengthValue);
@@ -115,11 +112,11 @@ export class Voucher {
 
 
         // Stack
-        const {value: stackLength, length: stackLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const { value: stackLength, length: stackLengthBytes } = deserialize.toVarInt(inputArray.subarray(offset));
         offset += stackLengthBytes;
         const stack = [];
         for (let i = 0; i < stackLength; i++) {
-            const {value: itemLength, length: itemLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+            const { value: itemLength, length: itemLengthBytes } = deserialize.toVarInt(inputArray.subarray(offset));
             offset += itemLengthBytes;
             const item = uint8array.toString(inputArray.subarray(offset, offset + itemLengthBytes));
             offset += itemLength;
@@ -127,15 +124,15 @@ export class Voucher {
         }
 
         // Data
-        const {value: dataTotalLength, length: dataTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const { value: dataTotalLength, length: dataTotalLengthBytes } = deserialize.toVarInt(inputArray.subarray(offset));
         offset += dataTotalLengthBytes;
-        const data = deserialize.toArray(inputArray.subarray(offset, offset + dataTotalLength)).value;
+        const data = deserialize.toObject(inputArray.subarray(offset, offset + dataTotalLength), kindToConstructor).value;
         offset += dataTotalLength;
 
         // Timelock (each value var int)
-        const {value: startTick, length: startTickBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const { value: startTick, length: startTickBytes } = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += startTickBytes;
-        const {value: endTick, length: endTickBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const { value: endTick, length: endTickBytes } = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += endTickBytes;
         const timelock = { startTick: BigInt(startTick), endTick: BigInt(endTick) };
 
@@ -167,7 +164,7 @@ export class Voucher {
             output: { amount: BigInt(json.output.amount), recipient: json.output.recipient },
             stack: json.stack,
             data: json.data,
-            timelock: { startTick: BigInt(json.timelock.startTick), endTick: BigInt(json.timelock.endTick) },
+            timelock: { startTick: BigInt(json?.timelock?.startTick ?? 0), endTick: BigInt(json?.timelock?.endTick ?? 0) },
             authorizations: Authorization.fromAuthorizationsJSON({ authorizations: json.authorizations }),
         });
     }
@@ -179,22 +176,22 @@ export class Voucher {
         if(options.excludeKindPrefix === undefined) {
             options.excludeKindPrefix = false;
         }
-        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['VOUCHER'], 'uint8array');
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
+        const {value: elementKindUint8Array, length: elementKindUint8ArrayBytes} = serialize.fromVarInt(NET_KINDS.VOUCHER, 'uint8array');
+        const {value: versionUint8Array, length: versionUint8ArrayBytes} = serialize.fromVarInt(this.version, 'uint8array');
 
-        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
+        const {value: timestampUint8Array, length: timestampUint8ArrayBytes} = serialize.fromVarBigInt(this.timestamp, 'uint8array');
 
         const assetUint8Array = uint8array.fromString(this.asset);
-        const assetLengthUint8Array = varint.encodeVarInt(assetUint8Array.length, 'uint8array');
+        const {value: assetLengthUint8Array, length: assetLengthUint8ArrayBytes} = serialize.fromVarInt(assetUint8Array.length, 'uint8array');
 
         // Inputs
-        const inputsAmountUint8Array = varint.encodeVarInt(this.inputs.length, 'uint8array');
+        const {value: inputsAmountUint8Array, length: inputsAmountUint8ArrayBytes} = serialize.fromVarInt(this.inputs.length, 'uint8array');
         let inputsItemsUint8Array = new Uint8Array();
 
         this.inputs.forEach(input => {
-            const inputAmountUint8Array = varbigint.encodeVarBigInt(input.amount, 'uint8array');
+            const {value: inputAmountUint8Array, length: inputAmountUint8ArrayBytes} = serialize.fromVarBigInt(input.amount, 'uint8array');
             const inputHashBytes = uint8array.fromHex(input.hash);
-            const hashLengthUint8Array = varint.encodeVarInt(inputHashBytes.length, 'uint8array');
+            const {value: hashLengthUint8Array, length: hashLengthUint8ArrayBytes} = serialize.fromVarInt(inputHashBytes.length, 'uint8array');
 
             const length = inputAmountUint8Array.length + hashLengthUint8Array.length + inputHashBytes.length;
             const inputUint8Array = new Uint8Array(length);
@@ -206,14 +203,14 @@ export class Voucher {
         });
 
         // Only one output
-        const outputAmountUint8Array = varbigint.encodeVarBigInt(this.output.amount, 'uint8array');
+        const {value: outputAmountUint8Array, length: outputAmountUint8ArrayBytes} = serialize.fromVarBigInt(this.output.amount, 'uint8array');
 
         // Recipient length is encoded as varint
-        const outputRecipientLengthUint8Array = varint.encodeVarInt(this.output.recipient.length, 'uint8array');
+        const {value: outputRecipientLengthUint8Array, length: outputRecipientLengthUint8ArrayBytes} = serialize.fromVarInt(this.output.recipient.length, 'uint8array');
         const outputRecipientUint8Array = uint8array.fromString(this.output.recipient);
 
         // Stack length is encoded as varint
-        const stackLengthUint8Array = varint.encodeVarInt(this.stack.length, 'uint8array');
+        const {value: stackLengthUint8Array, length: stackLengthUint8ArrayBytes} = serialize.fromVarInt(this.stack.length, 'uint8array');
         const stackUint8Array = [];
         // Stack are not active on V1
         if(this.stack.length > 0) {
@@ -221,12 +218,12 @@ export class Voucher {
         }
        
 
-        const dataUint8Array = serialize.fromArray(this.data).value;
-        const dataTotalLengthUint8Array = varint.encodeVarInt(dataUint8Array.length, 'uint8array');
+        const dataUint8Array = serialize.fromObject(this.data, kindToConstructor).value;
+        const {value: dataTotalLengthUint8Array, length: dataTotalLengthUint8ArrayBytes} = serialize.fromVarInt(dataUint8Array.length, 'uint8array');
 
         // Timelock
-        const timelockStartAtUint8Array = varbigint.encodeVarBigInt(this.timelock.startTick, 'uint8array');
-        const timelockEndAtUint8Array = varbigint.encodeVarBigInt(this.timelock.endTick, 'uint8array');
+        const {value: timelockStartAtUint8Array, length: timelockStartAtUint8ArrayBytes} = serialize.fromVarBigInt(this.timelock.startTick, 'uint8array');
+        const {value: timelockEndAtUint8Array, length: timelockEndAtUint8ArrayBytes} = serialize.fromVarBigInt(this.timelock.endTick, 'uint8array');
 
 
         // Authorizations
@@ -288,13 +285,7 @@ export class Voucher {
         return result;
     }
 
-    computeHash() {
-        const array = this.toUint8Array({excludeAuthorizations: true});
-        const hash = sha256(array);
-        return uint8array.toHex(hash);
-    }
-
-    toHash(encoding = 'uint8array', {excludeAuthorizations = false} = {}) {
+    toHash(encoding = 'uint8array', {excludeAuthorizations = true} = {}) {
         const uint8Array = this.toUint8Array({excludeAuthorizations});
         const hashUint8Array = sha256(uint8Array);
         return encoding === 'uint8array' ? hashUint8Array : uint8array.toHex(hashUint8Array);
@@ -351,10 +342,6 @@ export class Voucher {
 
     toSignableMessage() {
         return new SignableMessage(this.toHash('hex', {excludeAuthorizations: true}));
-    }
-
-    toDoc(signer) {
-        return makeDoc(this, signer);
     }
 
     async sign(signer) {
