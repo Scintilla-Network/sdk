@@ -1,6 +1,6 @@
 # BigDecimal
 
-A big decimal is a decimal number that is used to represent a large number.
+Arbitrary-precision decimal arithmetic for JavaScript. Handles very large numbers and precise decimal calculations without floating-point errors.
 
 ## Installation
 
@@ -14,25 +14,35 @@ import { BigDecimal } from '@scintilla-network/sdk';
 const bigDecimal = new BigDecimal('1234567890.1234567890');
 ```
 
-## Properties
-
-- `value`: The value of the big decimal.
-
-## Methods
-
-- `add(other)`: Adds another big decimal to this big decimal.
-- `subtract(other)`: Subtracts another big decimal from this big decimal.
-- `multiply(other)`: Multiplies this big decimal by another big decimal.
-- `divide(other)`: Divides this big decimal by another big decimal.
-- `toString()`: Converts the big decimal to a string.
-- `toNumber()`: Converts the big decimal to a number.
-- `toJSON()`: Converts the big decimal to a JSON object.
-- `toHash()`: Converts the big decimal to a hash.
-- `toBase64()`: Converts the big decimal to a base64 string.    
-
-## Example
+## Usage
 
 ```js
-const bigDecimal = new BigDecimal('1234567890.1234567890');
-console.log(bigDecimal.toString());
+// Initialize from string, number, or another BigDecimal
+const a = new BigDecimal('123.456');
+const b = new BigDecimal('789.012');
+
+// Arithmetic operations
+const sum = a.add(b);              // 912.468
+const diff = a.subtract(b);        // -665.556
+const product = a.multiply(b);    // 97408.265472
+const quotient = a.divide(b, 10); // 0.1564862805 (10 decimal places)
+
+new BigDecimal('10').divide(new BigDecimal('2')); // "5"
+new BigDecimal('1').divide(new BigDecimal('3'));  // "0.33333..." (20 decimals default)
+new BigDecimal('1').divide(new BigDecimal('3'), 2); // "0.33" (2 decimal places)
 ```
+
+## API
+
+### Constructor
+- `new BigDecimal(value)` - Create from string, number, or BigDecimal
+
+### Methods
+- `add(other)` - Addition
+- `subtract(other)` - Subtraction  
+- `multiply(other)` - Multiplication
+- `divide(other, precision?)` - Division (default precision: 20)
+- `compareTo(other)` - Returns -1, 0, or 1
+- `equals(other)` - Equality check
+- `toString()` - String representation
+- `toNumber()` - Convert to JavaScript number (throws on precision loss)

@@ -57,7 +57,12 @@ class BigDecimal {
             decSum = decSum.slice(-aDec.length);
         }
 
-        return new BigDecimal(intSum.toString() + '.' + decSum);
+        let result = intSum.toString();
+        if (aDec.length > 0) {
+            result += '.' + decSum;
+        }
+
+        return new BigDecimal(result);
     }
 
     /**
@@ -74,18 +79,28 @@ class BigDecimal {
         let aDec = a[1] || '';
         let bDec = b[1] || '';
 
-        while (aDec.length < bDec.length) aDec += '0';
-        while (bDec.length < aDec.length) bDec += '0';
+        // Align decimal places
+        let maxDecLen = Math.max(aDec.length, bDec.length);
+        while (aDec.length < maxDecLen) aDec += '0';
+        while (bDec.length < maxDecLen) bDec += '0';
 
         let intDiff = BigInt(aInt) - BigInt(bInt);
-        let decDiff = (BigInt(aDec) - BigInt(bDec)).toString().padStart(aDec.length, '0');
+        let decDiff = BigInt(aDec) - BigInt(bDec);
 
-        if (decDiff.startsWith('-')) {
-            intDiff -= BigInt(1);
-            decDiff = (BigInt('1' + '0'.repeat(aDec.length)) + BigInt(decDiff)).toString().slice(1);
+        // Handle borrowing when decimal part is negative
+        if (decDiff < 0n) {
+            intDiff -= 1n;
+            decDiff = BigInt('1' + '0'.repeat(maxDecLen)) + decDiff;
         }
 
-        return new BigDecimal(intDiff.toString() + '.' + decDiff);
+        let decStr = decDiff.toString().padStart(maxDecLen, '0');
+        let result = intDiff.toString();
+        
+        if (maxDecLen > 0) {
+            result += '.' + decStr;
+        }
+
+        return new BigDecimal(result);
     }
 
     /**
@@ -103,7 +118,32 @@ class BigDecimal {
 
         let result = (aInt * bInt).toString();
 
-        return new BigDecimal(result.slice(0, -decPlaces) + '.' + result.slice(-decPlaces));
+        // Special case: if result is "0", just return "0"
+        if (result === '0') {
+            return new BigDecimal('0');
+        }
+
+        // Handle the case where result is shorter than decimal places
+        if (result.length <= decPlaces) {
+            result = '0'.repeat(decPlaces - result.length + 1) + result;
+        }
+
+        if (decPlaces === 0) {
+            return new BigDecimal(result);
+        }
+
+        let intPart = result.slice(0, -decPlaces) || '0';
+        let decPart = result.slice(-decPlaces);
+
+        // Remove trailing zeros from decimal part
+        decPart = decPart.replace(/0+$/, '');
+        
+        // If no decimal part remains, return just the integer
+        if (decPart === '') {
+            return new BigDecimal(intPart);
+        }
+
+        return new BigDecimal(intPart + '.' + decPart);
     }
 
     /**
@@ -116,25 +156,67 @@ class BigDecimal {
         let a = this.value.split('.');
         let b = BigDecimal.parseValue(other).split('.');
 
+        // Convert to integers by removing decimal points
         let aInt = BigInt(a[0] + (a[1] || ''));
         let bInt = BigInt(b[0] + (b[1] || ''));
         let decPlacesA = (a[1] || '').length;
         let decPlacesB = (b[1] || '').length;
-        let decPlaces = decPlacesA - decPlacesB;
 
-        let quotient = (aInt * BigInt(10 ** (precision + Math.abs(decPlaces)))) / bInt;
+        // Scale the numerator to account for the desired precision
+        // We need to scale by: 10^(precision + decPlacesB - decPlacesA)
+        let scaleExponent = precision + decPlacesB - decPlacesA;
+        let scale = BigInt(10) ** BigInt(scaleExponent);
+        let scaledNumerator = aInt * scale;
+
+        // Perform the division
+        let quotient = scaledNumerator / bInt;
+        let remainder = scaledNumerator % bInt;
+        
+        // If there's no remainder, we have an exact division
+        // Return the clean result without unnecessary decimal places
+        if (remainder === 0n) {
+            let quotientStr = quotient.toString();
+            
+            // We still need to place the decimal point correctly
+            if (quotientStr.length <= precision) {
+                quotientStr = '0'.repeat(precision - quotientStr.length + 1) + quotientStr;
+            }
+            
+            let decimalPos = quotientStr.length - precision;
+            let intPart = quotientStr.slice(0, decimalPos);
+            let decPart = quotientStr.slice(decimalPos);
+            
+            // Remove trailing zeros from decimal part
+            decPart = decPart.replace(/0+$/, '');
+            
+            // If no decimal part remains, return just the integer
+            if (decPart === '') {
+                return new BigDecimal(intPart);
+            }
+            
+            return new BigDecimal(intPart + '.' + decPart);
+        }
+        
+        // Non-exact division - keep the full precision
         let quotientStr = quotient.toString();
 
-        if (decPlaces < 0) {
-            return new BigDecimal(
-                quotientStr.slice(0, decPlaces) + '.' + quotientStr.slice(decPlaces)
-            );
-        } else {
-            return new BigDecimal(
-                quotientStr.slice(0, -precision) + '.' + quotientStr.slice(-precision)
-            );
+        // Now we need to insert the decimal point at the right position
+        // The result has 'precision' decimal places
+        if (quotientStr.length <= precision) {
+            // Need to pad with leading zeros
+            quotientStr = '0'.repeat(precision - quotientStr.length + 1) + quotientStr;
         }
+
+        // Insert decimal point
+        let decimalPos = quotientStr.length - precision;
+        let intPart = quotientStr.slice(0, decimalPos);
+        let decPart = quotientStr.slice(decimalPos);
+
+        let result = intPart + '.' + decPart;
+
+        return new BigDecimal(result);
     }
+
     /**
      * Compare this BigDecimal to another BigDecimal.
      * @param {BigDecimal} other - The other BigDecimal to compare to.
@@ -144,14 +226,27 @@ class BigDecimal {
         let a = this.value.split('.');
         let b = BigDecimal.parseValue(other).split('.');
 
-        let aInt = BigInt(a[0] + (a[1] || ''));
-        let bInt = BigInt(b[0] + (b[1] || ''));
-        let aDecPlaces = (a[1] || '').length;
-        let bDecPlaces = (b[1] || '').length;
+        let aInt = BigInt(a[0]);
+        let bInt = BigInt(b[0]);
+        let aDec = a[1] || '';
+        let bDec = b[1] || '';
 
-        if (aInt === bInt && aDecPlaces === bDecPlaces) return 0;
-        if (aInt > bInt || (aInt === bInt && aDecPlaces < bDecPlaces)) return 1;
-        return -1;
+        // Compare integer parts first
+        if (aInt > bInt) return 1;
+        if (aInt < bInt) return -1;
+
+        // Integer parts are equal, compare decimal parts
+        // Pad to same length
+        let maxLen = Math.max(aDec.length, bDec.length);
+        aDec = aDec.padEnd(maxLen, '0');
+        bDec = bDec.padEnd(maxLen, '0');
+
+        let aDecInt = BigInt(aDec || '0');
+        let bDecInt = BigInt(bDec || '0');
+
+        if (aDecInt > bDecInt) return 1;
+        if (aDecInt < bDecInt) return -1;
+        return 0;
     }
 
     /**
@@ -178,21 +273,21 @@ class BigDecimal {
         }
         return num;
     }
+
     /**
      * Get the string representation of this BigDecimal.
      * @returns {string} - The string representation of this BigDecimal.
      */
     toString() {
-        // Ensure there's a leading zero : 0.1 instead of .1
-        // and ensure that 0.0 is represented as 0
         let str = this.value;
-        if (str.startsWith('.')){
-            str = `0${str}`;
+        
+        // Ensure there's a leading zero: 0.1 instead of .1
+        if (str.startsWith('.')) {
+            str = '0' + str;
         }
 
         return str;
     }
-
 }
 
 export default BigDecimal;
