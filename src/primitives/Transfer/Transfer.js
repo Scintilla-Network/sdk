@@ -1,14 +1,11 @@
+import { serialize, deserialize } from '@scintilla-network/serialize';
+import { uint8array, json } from '@scintilla-network/keys/utils';
 import { sha256 } from '@scintilla-network/hashes/classic';
 import { SignableMessage } from '@scintilla-network/keys';
-import { varint, uint8array, json, varbigint } from '@scintilla-network/keys/utils';
 
 import { NET_KINDS, NET_KINDS_ARRAY } from '../messages/NetMessage/NET_KINDS.js';
 import { Authorization } from '../Authorization/Authorization.js';
-// import { deserialize } from '../../utils/deserialize/index.js';
-import deserialize from '../../utils/deserialize/index.js';
-import { serialize } from '../../utils/serialize/index.js';
 import { kindToConstructor } from '../../utils/kindToConstructor.js';
-import makeDoc from '../../utils/makeDoc.js';
 
 function loadData(data) {
     return data.map(datum => {
@@ -59,58 +56,58 @@ export class Transfer {
 
         let offset = 0;
 
-        const {value: elementKind, length: elementKindLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: elementKind, length: elementKindLength} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += elementKindLength;
         if(elementKind !== NET_KINDS['TRANSFER']) {
             throw new Error(`Invalid element kind: ${elementKind}(${NET_KINDS_ARRAY[elementKind]}) - Expected: ${NET_KINDS['TRANSFER']}(TRANSFER)`);
         }
         transferProps.kind = NET_KINDS_ARRAY[elementKind];
 
-        const {value: version, length: versionLength} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: version, length: versionLength} = deserialize.toVarInt(inputArray.subarray(offset));
         transferProps.version = version;
         offset += versionLength;
 
         // Cluster
-        const {value: clusterLength, length: clusterLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: clusterLength, length: clusterLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += clusterLengthBytes;
         transferProps.cluster = uint8array.toString(inputArray.subarray(offset, offset + clusterLength));
         offset += clusterLength;
 
         // Timestamp
-        const {value: timestamp, length: timestampBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: timestamp, length: timestampBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         transferProps.timestamp = timestamp;
         offset += timestampBytes;
      
         // Action
-        const {value: actionLength, length: actionLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: actionLength, length: actionLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += actionLengthBytes;
         transferProps.action = uint8array.toString(inputArray.subarray(offset, offset + actionLength));
         offset += actionLength;
 
         // Type
-        const {value: typeLength, length: typeLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: typeLength, length: typeLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += typeLengthBytes;
         transferProps.type = uint8array.toString(inputArray.subarray(offset, offset + typeLength));
         offset += typeLength;
 
         // Data
-        const {value: dataTotalLength, length: dataTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: dataTotalLength, length: dataTotalLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += dataTotalLengthBytes;
-        const data = deserialize.toArray(inputArray.subarray(offset));
+        const data = deserialize.toObject(inputArray.subarray(offset), kindToConstructor);
         transferProps.data = data.value;
         offset += dataTotalLength;
 
         // Timelock
-        const {value: startTick, length: startTickBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: startTick, length: startTickBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += startTickBytes;
-        const {value: endTick, length: endTickBytes} = varbigint.decodeVarBigInt(inputArray.subarray(offset));
+        const {value: endTick, length: endTickBytes} = deserialize.toVarBigInt(inputArray.subarray(offset));
         offset += endTickBytes;
         transferProps.timelock = {startTick: BigInt(startTick), endTick: BigInt(endTick)};
 
         // Fees
-        const {value: feesTotalLength, length: feesTotalLengthBytes} = varint.decodeVarInt(inputArray.subarray(offset));
+        const {value: feesTotalLength, length: feesTotalLengthBytes} = deserialize.toVarInt(inputArray.subarray(offset));
         offset += feesTotalLengthBytes;
-        const fees = deserialize.toArray(inputArray.subarray(offset));
+        const fees = deserialize.toObject(inputArray.subarray(offset), kindToConstructor);
         transferProps.fees = fees.value;
         offset += feesTotalLength;
 
@@ -128,37 +125,37 @@ export class Transfer {
             options.excludeKindPrefix = false;
         }
 
-        const elementKindUint8Array = varint.encodeVarInt(NET_KINDS['TRANSFER'], 'uint8array');
-        const versionUint8Array = varint.encodeVarInt(this.version, 'uint8array');
+        const {value: elementKindUint8Array, length: elementKindLengthUint8Array} = serialize.fromVarInt(NET_KINDS['TRANSFER']);
+        const {value: versionUint8Array, length: versionLengthUint8Array} = serialize.fromVarInt(this.version);
 
         const clusterUint8Array = uint8array.fromString(this.cluster);
-        const clusterLengthUint8Array = varint.encodeVarInt(clusterUint8Array.length, 'uint8array');
+        const {value: clusterLengthUint8Array, length: clusterLengthLengthUint8Array} = serialize.fromVarInt(clusterUint8Array.length);
 
-        const timestampUint8Array = varbigint.encodeVarBigInt(this.timestamp, 'uint8array');
+        const {value: timestampUint8Array, length: timestampLengthUint8Array} = serialize.fromVarBigInt(this.timestamp);
 
         const actionUint8Array = uint8array.fromString(this.action);
-        const actionLengthUint8Array = varint.encodeVarInt(actionUint8Array.length, 'uint8array');
+        const {value: actionLengthUint8Array, length: actionLengthLengthUint8Array} = serialize.fromVarInt(actionUint8Array.length);
         
         const typeUint8Array = uint8array.fromString(this.type);
-        const typeLengthUint8Array = varint.encodeVarInt(typeUint8Array.length, 'uint8array');
+        const {value: typeLengthUint8Array, length: typeLengthLengthUint8Array} = serialize.fromVarInt(typeUint8Array.length);
 
-        const dataUint8Array = serialize.fromArray(this.data);
-        const dataTotalLengthUint8Array = varint.encodeVarInt(dataUint8Array.value.length, 'uint8array');
+        const dataUint8Array = serialize.fromObject(this.data);
+        const {value: dataTotalLengthUint8Array, length: dataTotalLengthLengthUint8Array} = serialize.fromVarInt(dataUint8Array.value.length);
 
         // Timelock
-        const timelockStartAtUint8Array = varbigint.encodeVarBigInt(this.timelock.startTick, 'uint8array');
-        const timelockEndAtUint8Array = varbigint.encodeVarBigInt(this.timelock.endTick, 'uint8array');
+        const {value: timelockStartAtUint8Array, length: timelockStartAtLengthUint8Array} = serialize.fromVarBigInt(this.timelock.startTick);
+        const {value: timelockEndAtUint8Array, length: timelockEndAtLengthUint8Array} = serialize.fromVarBigInt(this.timelock.endTick);
 
         // Fees
-        const feesUint8Array = serialize.fromArray(this.fees);
-        const feesLengthUint8Array = varint.encodeVarInt(feesUint8Array.value.length, 'uint8array');
+        const feesUint8Array = serialize.fromObject(this.fees);
+        const {value: feesLengthUint8Array, length: feesLengthLengthUint8Array} = serialize.fromVarInt(feesUint8Array.value.length);
 
         let authorizationsUint8Array = new Uint8Array();
         if(options.excludeAuthorizations === false) {
             authorizationsUint8Array = Authorization.toAuthorizationsUint8Array(this.authorizations);
         }
 
-        const totalLength = (options.excludeKindPrefix ? 0 : elementKindUint8Array.length) 
+        const totalLength = (options.excludeKindPrefix ? 0 : elementKindLengthUint8Array) 
         + versionUint8Array.length 
         + clusterLengthUint8Array.length + clusterUint8Array.length 
         + timestampUint8Array.length
@@ -237,7 +234,7 @@ export class Transfer {
         return obj;
     }
 
-    verifyAuthorization() {
+    verifyAuthorizations() {
         return this.authorizations.every(auth => auth.verify(this).valid);
     }
 
@@ -254,15 +251,14 @@ export class Transfer {
         if (authorization.signature === '' || authorization.signature === undefined) {
             throw new Error('Signature is required for authorization.');
         }
+        if(!authorization.verify){
+            authorization = new Authorization(authorization);
+        }
         this.authorizations.push(authorization);
     }
 
     toSignableMessage({excludeAuthorizations = false} = {}) {
         return new SignableMessage(this.toHex({excludeAuthorizations}));
-    }
-
-    toDoc(signer) {
-        return makeDoc(this, signer);
     }
 
     async sign(signer) {
@@ -274,7 +270,6 @@ export class Transfer {
         authorization = await authorization.sign(this, signer, true);
         this.authorizations.push(authorization);
         return this;
-        // return signDoc(await this.toDoc(signer));
     }
 
     validate() {
@@ -286,7 +281,7 @@ export class Transfer {
         const authWithPublicKey = signedAuthorizations.filter(auth => auth.publicKey);
         if(authWithPublicKey.length < 0) return {valid: false, error: 'At least one authorization with public key is required.'};
 
-        if (!this.verifyAuthorization()) return {valid: false,error: 'Invalid signature.'};
+        if (!this.verifyAuthorizations()) return {valid: false,error: 'Invalid signature.'};
         return {valid: true, error: ''};
     }
 

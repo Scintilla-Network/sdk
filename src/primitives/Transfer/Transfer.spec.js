@@ -1,8 +1,8 @@
 // import { describe, it, expect } from 'vitest';
 import { describe, it, expect } from '@scintilla-network/litest';
 import { Transfer } from './Transfer.js';
-import { utils } from '@scintilla-network/keys';
-const { uint8array } = utils;
+import { Wallet } from '@scintilla-network/wallet';
+import { Asset } from '../Asset/Asset.js'
 
 describe('Transfer', () => {
     it('should be able to create a Transfer instance', () => {
@@ -129,18 +129,6 @@ describe('Transfer - Functions', () => {
         }]);
         expect(transfer.timestamp).toBeDefined();
 
-        // expect(transfer.authorizations).toEqual([{
-        //     address: null,
-        //     moniker: 'alex',
-        //     publicKey: uint8array.fromHex('1234567890'),
-        //     signature: '6b36a907c9115e9f8689d1d6bcdcaab51d750c3e54007d4d960994f96479b04918f7a9f5b66eb9ad44522945e0c556252b1c889208b8f07596370bbf29d43605',
-        // },{
-        //     address: null,
-        //     moniker: 'bob',
-        //     publicKey: uint8array.fromHex('1234567890'),
-        //     signature: '500775d65ce45a4209fb584e6d16205b69e7e26fe84022ef455b90a5a8ab5914412cc87d7b6143991483b3bd3f71cf8bb89b055b2a3c6083046959af5eb9c2bd',
-        // }]);
-
         expect(transfer.fees).toEqual([{
             amount: 1000,
             asset: 'SCT',
@@ -149,16 +137,52 @@ describe('Transfer - Functions', () => {
 
     });
     describe('toUint8Array', () => {
-        it('should have the same uint8Array', () => {
+        it('should have the same uint8Array', async () => {
             const transfer = new Transfer({
                 cluster: 'core.banking',
                 action: 'EXECUTE',
                 type: 'ASSET',
-                 timestamp: 1758835630175n,
+                timestamp: 1758835630175n,
             });
+            const signer = Wallet.fromMnemonic('test test test test test test test test test test test junk').getAccount(0).getPersona('alice').getSigner();
+            await transfer.sign(signer);
+
             const uint8Array = transfer.toUint8Array();
             expect(uint8Array).toEqual(transfer.toUint8Array());
+            const hash = transfer.toHash('hex');
+            const parsed = Transfer.fromUint8Array(uint8Array);
+            expect(parsed.toHash('hex')).toBe(hash);
+
+            const isValid = parsed.isValid();
+            expect(isValid).toBe(true);
+            const verify = parsed.verifyAuthorizations();
+            expect(verify).toBe(true);
+            const validate = parsed.validate();
+            expect(validate.valid).toBe(true);
+            expect(validate.error).toBe('');
         });
     });
+    describe('Transfer data', () => {
+        it('should handle data', ()=>{
+
+            const someAsset = new Asset({
+                name: 'Some Asset',
+                symbol: 'SOME',
+                decimals: 18,
+            });
+
+            const transfer = new Transfer({
+                cluster: 'core.banking',
+                action: 'EXECUTE',
+                type: 'ASSET',
+                timestamp: 1758835630175n,
+                data: [someAsset.toJSON()],
+            });
+            const uint8Array = transfer.toUint8Array();
+            const parsed = Transfer.fromUint8Array(uint8Array);
+            expect(parsed.toHash('hex')).toBe(transfer.toHash('hex'));
+            expect(parsed.data[0].toJSON()).toEqual(someAsset.toJSON());
+        });
+    })
 })
 
